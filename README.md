@@ -1,6 +1,6 @@
-# appzap_v2_app
+# AppZap V2 App
 
-A new Flutter project.
+AppZap app v2 - A new Flutter project.
 
 ## Getting Started
 
