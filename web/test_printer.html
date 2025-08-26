@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppZap V2 - Sunmi Printer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+        }
+        .canvas-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #receiptCanvas {
+            border: 1px solid #ddd;
+            background: white;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AppZap V2 - Sunmi Printer Test</h1>
+        <p>Test the printing functionality of your Sunmi V2 Pro device.</p>
+        
+        <!-- Printer Status -->
+        <div class="input-group">
+            <button class="button" onclick="checkPrinterStatus()">Check Printer Status</button>
+            <button class="button warning" onclick="testPrinter()">Test Printer</button>
+            <div id="printerStatus"></div>
+        </div>
+
+        <!-- Logo Printing -->
+        <div class="input-group">
+            <label>Print Flutter Logo (Asset):</label>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                <input type="number" id="logoWidth" placeholder="Width (px)" value="200" style="width: 120px;">
+                <input type="number" id="logoHeight" placeholder="Height (px)" value="200" style="width: 120px;">
+                <button class="button success" onclick="printLogo()">Print Logo</button>
+            </div>
+            <div id="logoStatus"></div>
+        </div>
+
+        <!-- Image Creation -->
+        <div class="input-group">
+            <label>Create Test Receipt Image:</label>
+            <button class="button" onclick="generateReceiptImage()">Generate Receipt Image</button>
+            <div class="canvas-container">
+                <canvas id="receiptCanvas" width="384" height="600"></canvas>
+            </div>
+        </div>
+
+        <!-- Print Image -->
+        <div class="input-group">
+            <label>Print Image (Base64):</label>
+            <textarea id="imageBase64" placeholder="Paste base64 image data here or use the generated receipt above"></textarea>
+            <button class="button success" onclick="printImage()">Print Image</button>
+        </div>
+
+        <!-- Print Receipt -->
+        <div class="input-group">
+            <label>Receipt Text:</label>
+            <textarea id="receiptText" placeholder="Enter receipt text here">APPZAP STORE
+================
+Date: 2025-08-26
+Time: 14:30:45
+================
+
+Item 1           $10.00
+Item 2           $15.50
+Tax               $2.55
+================
+Total:           $28.05
+
+Thank you for shopping!
+Visit: appzap.la</textarea>
+            <button class="button success" onclick="printReceipt()">Print Receipt (Image + Text)</button>
+        </div>
+
+        <!-- QR Code -->
+        <div class="input-group">
+            <label>QR Code Data:</label>
+            <input type="text" id="qrData" value="https://appzap.la" placeholder="Enter QR code data">
+            <label>QR Size (1-10):</label>
+            <input type="number" id="qrSize" value="8" min="1" max="10">
+            <button class="button" onclick="printQRCode()">Print QR Code</button>
+        </div>
+
+        <!-- Results -->
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Check if Flutter WebView handlers are available
+        function isFlutterAvailable() {
+            return window.flutter_inappwebview && window.flutter_inappwebview.callHandler;
+        }
+
+        // Display result
+        function showResult(result) {
+            const resultsDiv = document.getElementById('results');
+            const resultElement = document.createElement('div');
+            resultElement.className = 'result';
+            resultElement.innerHTML = `
+                <strong>Result:</strong><br>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+                <small>Time: ${new Date().toLocaleString()}</small>
+            `;
+            resultsDiv.insertBefore(resultElement, resultsDiv.firstChild);
+        }
+
+        // Check printer status
+        async function checkPrinterStatus() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            try {
+                const result = await window.flutter_inappwebview.callHandler('getPrinterStatus');
+                showResult(result);
+                
+                const statusDiv = document.getElementById('printerStatus');
+                if (result.status === 'success' && result.data.isConnected) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Sunmi Printer Connected</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ Sunmi Printer Not Available</div>';
+                }
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Test printer functionality
+        async function testPrinter() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            try {
+                const result = await window.flutter_inappwebview.callHandler('testPrinter');
+                showResult(result);
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Print Flutter logo with custom size
+        async function printLogo() {
+            if (!isFlutterAvailable()) {
+                document.getElementById('logoStatus').innerHTML = '<div class="status error">Flutter WebView not available</div>';
+                return;
+            }
+
+            try {
+                const width = parseInt(document.getElementById('logoWidth').value) || 200;
+                const height = parseInt(document.getElementById('logoHeight').value) || 200;
+                
+                document.getElementById('logoStatus').innerHTML = '<div class="status">Printing logo...</div>';
+                
+                const result = await window.flutter_inappwebview.callHandler('printLogo', {
+                    width: width,
+                    height: height
+                });
+                
+                const statusClass = result.status === 'success' ? 'success' : 'error';
+                document.getElementById('logoStatus').innerHTML = 
+                    `<div class="status ${statusClass}">${result.message}</div>`;
+                    
+            } catch (error) {
+                document.getElementById('logoStatus').innerHTML = 
+                    `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Generate a test receipt image
+        function generateReceiptImage() {
+            const canvas = document.getElementById('receiptCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Set text properties
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            
+            let y = 30;
+            const lineHeight = 25;
+            
+            // Header
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('APPZAP STORE', canvas.width / 2, y);
+            y += lineHeight * 1.5;
+            
+            // Separator
+            ctx.font = '16px Arial';
+            ctx.fillText('========================', canvas.width / 2, y);
+            y += lineHeight;
+            
+            // Date and time
+            ctx.font = '14px Arial';
+            const now = new Date();
+            ctx.fillText(`Date: ${now.toLocaleDateString()}`, canvas.width / 2, y);
+            y += lineHeight;
+            ctx.fillText(`Time: ${now.toLocaleTimeString()}`, canvas.width / 2, y);
+            y += lineHeight * 1.5;
+            
+            // Items (align left for items)
+            ctx.textAlign = 'left';
+            const items = [
+                {name: 'Coffee Bean 1kg', price: '$25.00'},
+                {name: 'Espresso Cup', price: '$8.50'},
+                {name: 'Sugar Pack', price: '$2.50'},
+            ];
+            
+            items.forEach(item => {
+                ctx.fillText(item.name, 20, y);
+                ctx.textAlign = 'right';
+                ctx.fillText(item.price, canvas.width - 20, y);
+                ctx.textAlign = 'left';
+                y += lineHeight;
+            });
+            
+            y += lineHeight;
+            
+            // Total section
+            ctx.textAlign = 'center';
+            ctx.fillText('========================', canvas.width / 2, y);
+            y += lineHeight;
+            
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('TOTAL: $36.00', canvas.width / 2, y);
+            y += lineHeight * 2;
+            
+            ctx.font = '12px Arial';
+            ctx.fillText('Thank you for shopping!', canvas.width / 2, y);
+            y += lineHeight;
+            ctx.fillText('Visit: appzap.la', canvas.width / 2, y);
+            
+            // Convert to base64 and update textarea
+            const base64 = canvas.toDataURL('image/png').split(',')[1];
+            document.getElementById('imageBase64').value = base64;
+            
+            console.log('Receipt image generated');
+        }
+
+        // Print image
+        async function printImage() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            const base64Image = document.getElementById('imageBase64').value.trim();
+            if (!base64Image) {
+                showResult({error: 'Please provide base64 image data'});
+                return;
+            }
+
+            try {
+                const result = await window.flutter_inappwebview.callHandler('printImage', base64Image);
+                showResult(result);
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Print receipt with image and text
+        async function printReceipt() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            const receiptData = {
+                image: document.getElementById('imageBase64').value.trim() || null,
+                text: document.getElementById('receiptText').value.trim() || null,
+                cutPaper: true
+            };
+
+            if (!receiptData.image && !receiptData.text) {
+                showResult({error: 'Please provide either image or text data'});
+                return;
+            }
+
+            try {
+                const result = await window.flutter_inappwebview.callHandler('printReceipt', receiptData);
+                showResult(result);
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Print QR code
+        async function printQRCode() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            const qrData = document.getElementById('qrData').value.trim();
+            const qrSize = parseInt(document.getElementById('qrSize').value) || 8;
+
+            if (!qrData) {
+                showResult({error: 'Please provide QR code data'});
+                return;
+            }
+
+            try {
+                const result = await window.flutter_inappwebview.callHandler('printQRCode', qrData, qrSize);
+                showResult(result);
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Auto-check printer status on load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, checking printer status...');
+            setTimeout(checkPrinterStatus, 1000);
+        });
+
+        // Debug: Log when Flutter handlers become available
+        const checkFlutter = setInterval(() => {
+            if (isFlutterAvailable()) {
+                console.log('Flutter WebView handlers are available');
+                clearInterval(checkFlutter);
+            }
+        }, 100);
+    </script>
+</body>
+</html>
