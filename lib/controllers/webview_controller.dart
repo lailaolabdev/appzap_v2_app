@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import '../services/printer_service.dart';
@@ -14,7 +16,7 @@ class WebViewController extends GetxController {
   final canGoForward = false.obs;
 
   // Initial URL
-  final String initialUrl = 'https://appzap-v2.appzap.la/';
+  final String initialUrl = 'https://staging-v2.appzap.la/';
 
   @override
   void onInit() {
@@ -68,9 +70,35 @@ class WebViewController extends GetxController {
           if (arguments.isNotEmpty) {
             final data = arguments[0] as Map<String, dynamic>;
 
-            final success = await printerService.printReceipt(
-              base64Image: data['image'] as String?,
+            log("Received receipt data: $data");
+
+            // Extract parameters from the data
+            String? base64Image = data['imageBuffer'] as String? ?? data['image'] as String?;
+            Map<String, dynamic>? receiptData = data['receiptData'] as Map<String, dynamic>?;
+            bool cutPaper = data['cutPaper'] as bool? ?? true;
+            int? imageWidth = data['imageWidth'] as int?;
+            int? imageHeight = data['imageHeight'] as int?;
+
+            // Validate that we have receipt data
+            if (receiptData == null) {
+              log("No receipt data found in request");
+              return {
+                "status": "error", 
+                "message": "No receipt data provided",
+                "timestamp": DateTime.now().toIso8601String(),
+              };
+            }
+
+            // Use the new JSON-based printing method
+            final success = await printerService.printReceiptFromJson(
+              receiptData: receiptData,
+              base64Image: base64Image,
+              cutPaper: cutPaper,
+              imageWidth: imageWidth,
+              imageHeight: imageHeight,
             );
+
+            log("Print result: ${success ? 'success' : 'failed'}");
 
             return {
               "status": success ? "success" : "error",
@@ -78,11 +106,27 @@ class WebViewController extends GetxController {
                   ? "Receipt printed successfully"
                   : "Failed to print receipt",
               "timestamp": DateTime.now().toIso8601String(),
+              "data": {
+                "hasImage": base64Image != null,
+                "cutPaper": cutPaper,
+                "imageSize": imageWidth != null && imageHeight != null 
+                    ? "${imageWidth}x$imageHeight" 
+                    : "auto",
+              }
             };
           }
-          return {"status": "error", "message": "No receipt data provided"};
+          return {
+            "status": "error", 
+            "message": "No receipt data provided",
+            "timestamp": DateTime.now().toIso8601String(),
+          };
         } catch (e) {
-          return {"status": "error", "message": e.toString()};
+          log('Error in printReceipt handler: $e');
+          return {
+            "status": "error", 
+            "message": "Print handler error: ${e.toString()}",
+            "timestamp": DateTime.now().toIso8601String(),
+          };
         }
       },
     );

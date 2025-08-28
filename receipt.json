@@ -1,0 +1,258 @@
+{
+    "receiptData": {
+        "order": {
+            "orderId": "ORD-73b5baeb-06ea-4528-8ece-bf1565bcca79",
+            "orderNumber": "ORD-73b5baeb-06ea-4528-8ece-bf1565bcca79",
+            "qNumber": 93,
+            "orderType": "takeaway",
+            "lineItems": [
+                {
+                    "lineItemId": "LINE-1756348010380-0-v3zdwk",
+                    "menuItemId": "689799432ae1806473b4dcb6",
+                    "name": "5Pre-made Sandwich",
+                    "quantity": 1,
+                    "unitPrice": {
+                        "amount": 8.99,
+                        "currency": "LAK"
+                    },
+                    "lineTotal": {
+                        "amount": 8.99,
+                        "currency": "LAK"
+                    },
+                    "options": [],
+                    "status": "pending",
+                    "promotionApplied": false,
+                    "promotionDiscount": {
+                        "amount": 0,
+                        "currency": "USD"
+                    },
+                    "promotionDetails": {
+                        "originalLineTotal": null,
+                        "discountPerUnit": null,
+                        "targetedQuantity": null,
+                        "valueContribution": null,
+                        "proportionalAllocation": null
+                    },
+                    "kitchenInfo": {
+                        "course": "main",
+                        "priority": 1,
+                        "allergenInfo": []
+                    },
+                    "cancellation": {
+                        "requiresApproval": false,
+                        "isApproved": false
+                    },
+                    "_id": "68afbe6e4e6ac5622ce9d76b",
+                    "statusHistory": []
+                }
+            ],
+            "pricing": {
+                "lineItemsTotal": {
+                    "amount": 8.99,
+                    "currency": "LAK"
+                },
+                "modifiers": {
+                    "discounts": [],
+                    "taxes": [
+                        {
+                            "taxId": "TAX-1756348010432",
+                            "type": "vat",
+                            "name": "VAT",
+                            "rate": 20,
+                            "scope": "order",
+                            "calculationMethod": "inclusive",
+                            "taxableAmount": {
+                                "amount": 8.99,
+                                "currency": "LAK"
+                            },
+                            "taxAmount": {
+                                "amount": 1,
+                                "currency": "LAK"
+                            },
+                            "isInclusive": true,
+                            "isCompounded": false,
+                            "_id": "68afbe6e4e6ac5622ce9d76c"
+                        }
+                    ],
+                    "fees": [
+                        {
+                            "feeId": "FEE-1756348010432",
+                            "type": "service",
+                            "name": "Service Charge",
+                            "rate": 10,
+                            "feeAmount": {
+                                "amount": 1,
+                                "currency": "LAK"
+                            },
+                            "isInclusive": false,
+                            "taxable": false,
+                            "_id": "68afbe6e4e6ac5622ce9d76d"
+                        }
+                    ],
+                    "tips": []
+                },
+                "subtotal": {
+                    "amount": 8.99,
+                    "currency": "LAK"
+                },
+                "totalDiscount": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalTax": {
+                    "amount": 1,
+                    "currency": "LAK"
+                },
+                "totalFees": {
+                    "amount": 1,
+                    "currency": "LAK"
+                },
+                "totalTip": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalDue": {
+                    "amount": 9.99,
+                    "currency": "LAK"
+                },
+                "calculatedAt": "2025-08-28T02:26:50.433Z",
+                "currency": "LAK",
+                "exchangeRate": 1
+            },
+            "timing": {
+                "orderedAt": "2025-08-28T02:26:54.565Z",
+                "completedAt": "2025-08-28T02:26:54.616Z"
+            },
+            "paymentInfo": {
+                "paymentRequired": true,
+                "paymentStatus": "fully_paid",
+                "totalDue": {
+                    "amount": 9.99,
+                    "currency": "LAK"
+                },
+                "amountPaid": {
+                    "amount": 9.99,
+                    "currency": "LAK"
+                },
+                "balanceDue": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "transactionIds": [
+                    "TXN-8b38378c-8475-480d-91bf-aadad8948ed1"
+                ],
+                "readyForPayment": true
+            },
+            "customer": {
+                "name": "Walk-in Customer",
+                "phone": "000-000-0000"
+            },
+            "orderStatus": "completed",
+            "staff": {
+                "createdBy": {
+                    "id": "684b92c56d075de2323be7eb",
+                    "name": "appzapV2"
+                },
+                "server": {
+                    "id": "684b92c56d075de2323be7eb",
+                    "name": "appzapV2"
+                },
+                "lastUpdatedBy": {
+                    "id": "684b92c56d075de2323be7eb",
+                    "name": "appzapV2"
+                }
+            },
+            "transaction": {
+                "transactionId": "TXN-8b38378c-8475-480d-91bf-aadad8948ed1",
+                "transactionStatus": "completed",
+                "payments": [
+                    {
+                        "paymentId": "PAY-1756348014466-s3qdxop0n",
+                        "method": "bank_transfer",
+                        "status": "completed",
+                        "customerAmount": {
+                            "amount": 9.99,
+                            "currency": "LAK"
+                        },
+                        "tenderedAmount": {
+                            "amount": 9.99,
+                            "currency": "LAK"
+                        },
+                        "changeGiven": {
+                            "amount": 0,
+                            "currency": "LAK"
+                        },
+                        "grossAmount": {
+                            "amount": 9.99,
+                            "currency": "LAK"
+                        },
+                        "processingFees": [],
+                        "netAmount": {
+                            "amount": 9.99,
+                            "currency": "LAK"
+                        },
+                        "initiatedAt": "2025-08-28T02:26:54.466Z",
+                        "completedAt": "2025-08-28T02:26:54.466Z"
+                    }
+                ],
+                "paymentSummary": {
+                    "totalDue": {
+                        "amount": 9.99,
+                        "currency": "LAK"
+                    },
+                    "totalPaid": {
+                        "amount": 9.99,
+                        "currency": "LAK"
+                    },
+                    "balance": {
+                        "amount": 0,
+                        "currency": "LAK"
+                    }
+                }
+            }
+        },
+        "restaurantInfo": {
+            "address": {
+                "street": "",
+                "city": "",
+                "state": "",
+                "zipCode": "",
+                "country": "laos"
+            },
+            "contactInfo": {
+                "phone": "58635474"
+            },
+            "packageInfo": {
+                "features": {
+                    "maxBranches": 1,
+                    "maxUsers": 5,
+                    "maxProducts": 100,
+                    "maxTables": 20,
+                    "maxOrders": -1
+                },
+                "level": "basic",
+                "startDate": "2025-06-11T17:20:23.176Z",
+                "endDate": "2026-06-11T00:00:00.000Z",
+                "autoRenew": true,
+                "paymentStatus": "pending"
+            },
+            "settings": {
+                "currency": {
+                    "mainCurrency": "LAK",
+                    "supportedCurrencies": [
+                        {
+                            "code": "USD",
+                            "name": "US Dollar",
+                            "isActive": true
+                        },
+                        {
+                            "code": "LAK",
+                            "name": "Lao Kip",
+                            "isActive": true
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
