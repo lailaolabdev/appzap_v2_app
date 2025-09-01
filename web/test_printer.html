@@ -101,6 +101,7 @@
         <div class="input-group">
             <button class="button" onclick="checkPrinterStatus()">Check Printer Status</button>
             <button class="button warning" onclick="testPrinter()">Test Printer</button>
+            <button class="button success" onclick="testMockReceipt()">Test Mock Receipt</button>
             <div id="printerStatus"></div>
         </div>
 
@@ -214,6 +215,22 @@ Visit: appzap.la</textarea>
 
             try {
                 const result = await window.flutter_inappwebview.callHandler('testPrinter');
+                showResult(result);
+            } catch (error) {
+                showResult({error: error.message});
+            }
+        }
+
+        // Test mock receipt printing
+        async function testMockReceipt() {
+            if (!isFlutterAvailable()) {
+                showResult({error: 'Flutter WebView not available'});
+                return;
+            }
+
+            try {
+                showResult({status: 'info', message: 'Printing mock receipt...'});
+                const result = await window.flutter_inappwebview.callHandler('testMockReceipt');
                 showResult(result);
             } catch (error) {
                 showResult({error: error.message});

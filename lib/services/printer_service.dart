@@ -1,11 +1,13 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 import 'dart:ui' as ui;
-import '../models/print_models.dart';
+import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'receipt_formatter.dart';
 // Note: For production, you'll need to add google_ml_kit or similar OCR package
 
@@ -32,12 +34,15 @@ class PrinterService extends GetxService {
 
   /// Process receipt image and extract data
   /// This function takes an image (base64 or file path) and extracts receipt data
-  Future<Map<String, dynamic>> formatReceiptFromImage(String imageInput, {bool isBase64 = true}) async {
+  Future<Map<String, dynamic>> formatReceiptFromImage(
+    String imageInput, {
+    bool isBase64 = true,
+  }) async {
     try {
       print('Processing receipt image for data extraction...');
-      
+
       Uint8List imageBytes;
-      
+
       // Handle different input types
       if (isBase64) {
         // Remove data URL prefix if present
@@ -52,17 +57,20 @@ class PrinterService extends GetxService {
         print('File path processing not implemented yet');
         return {'error': 'File path processing not implemented yet'};
       }
-      
+
       // For now, return a mock data structure since OCR requires additional packages
       // In production, you would use google_ml_kit or similar for actual text extraction
-      Map<String, dynamic> extractedData = await _mockExtractReceiptData(imageBytes);
-      
+      Map<String, dynamic> extractedData = await _mockExtractReceiptData(
+        imageBytes,
+      );
+
       // Format the extracted data into a structured receipt format
-      Map<String, dynamic> formattedReceipt = _structureReceiptData(extractedData);
-      
+      Map<String, dynamic> formattedReceipt = _structureReceiptData(
+        extractedData,
+      );
+
       print('Receipt data extraction completed');
       return formattedReceipt;
-      
     } catch (e) {
       print('Error processing receipt image: $e');
       return {
@@ -75,10 +83,12 @@ class PrinterService extends GetxService {
 
   /// Mock function to simulate OCR text extraction from receipt image
   /// In production, replace this with actual OCR using google_ml_kit or similar
-  Future<Map<String, dynamic>> _mockExtractReceiptData(Uint8List imageBytes) async {
+  Future<Map<String, dynamic>> _mockExtractReceiptData(
+    Uint8List imageBytes,
+  ) async {
     // Simulate processing time
     await Future.delayed(Duration(milliseconds: 500));
-    
+
     // Return mock extracted data based on the receipt image shown in attachments
     return {
       'rawText': '''
@@ -119,7 +129,9 @@ class PrinterService extends GetxService {
   }
 
   /// Structure the extracted receipt data into a proper format
-  Map<String, dynamic> _structureReceiptData(Map<String, dynamic> extractedData) {
+  Map<String, dynamic> _structureReceiptData(
+    Map<String, dynamic> extractedData,
+  ) {
     // Parse the raw text to extract structured data
     Map<String, dynamic> structuredData = {
       'business': {
@@ -145,10 +157,7 @@ class PrinterService extends GetxService {
         {'name': 'Corretto', 'quantity': 1, 'price': 30.000},
         {'name': 'Coffee Breve', 'quantity': 1, 'price': 39.000},
       ],
-      'totals': {
-        'subtotal': 123.000,
-        'total': 123.000,
-      },
+      'totals': {'subtotal': 123.000, 'total': 123.000},
       'payment': {
         'method': 'BANK_TRANSFER',
         'amount': 123.000,
@@ -164,16 +173,16 @@ class PrinterService extends GetxService {
         'confidence': extractedData['confidence'] ?? 0.0,
         'imageSize': extractedData['imageSize'] ?? 0,
         'source': 'image_processing',
-      }
+      },
     };
-    
+
     return structuredData;
   }
 
   /// Convert structured receipt data back to formatted text for printing
   String formatStructuredReceiptData(Map<String, dynamic> receiptData) {
     StringBuffer formatted = StringBuffer();
-    
+
     try {
       // Business header
       if (receiptData.containsKey('business')) {
@@ -188,7 +197,7 @@ class PrinterService extends GetxService {
         }
         formatted.writeln('');
       }
-      
+
       // System info
       if (receiptData.containsKey('system')) {
         var system = receiptData['system'];
@@ -199,7 +208,7 @@ class PrinterService extends GetxService {
         formatted.writeln(system['orderId'] ?? '');
         formatted.writeln('');
       }
-      
+
       // Order info
       if (receiptData.containsKey('order')) {
         var order = receiptData['order'];
@@ -221,11 +230,11 @@ class PrinterService extends GetxService {
         }
         formatted.writeln('');
       }
-      
+
       formatted.writeln('.........................................');
       formatted.writeln('            Order Items');
       formatted.writeln('.........................................');
-      
+
       // Items
       double calculatedTotal = 0.0;
       if (receiptData.containsKey('items')) {
@@ -236,7 +245,7 @@ class PrinterService extends GetxService {
           double price = (item['price'] ?? 0.0).toDouble();
           double itemTotal = qty * price;
           calculatedTotal += itemTotal;
-          
+
           // Format item line with proper spacing
           String itemLine = '$qty x $name';
           int spacingNeeded = 32 - itemLine.length;
@@ -247,25 +256,29 @@ class PrinterService extends GetxService {
           formatted.writeln(itemLine);
         }
       }
-      
+
       formatted.writeln('');
       formatted.writeln('.........................................');
-      
+
       // Totals
       if (receiptData.containsKey('totals')) {
         var totals = receiptData['totals'];
         double subtotal = (totals['subtotal'] ?? calculatedTotal).toDouble();
         double total = (totals['total'] ?? subtotal).toDouble();
-        
+
         formatted.writeln('Subtotal${' ' * 20}K${subtotal.toStringAsFixed(3)}');
         formatted.writeln('Total${' ' * 23}K${total.toStringAsFixed(3)}');
       } else {
-        formatted.writeln('Subtotal${' ' * 20}K${calculatedTotal.toStringAsFixed(3)}');
-        formatted.writeln('Total${' ' * 23}K${calculatedTotal.toStringAsFixed(3)}');
+        formatted.writeln(
+          'Subtotal${' ' * 20}K${calculatedTotal.toStringAsFixed(3)}',
+        );
+        formatted.writeln(
+          'Total${' ' * 23}K${calculatedTotal.toStringAsFixed(3)}',
+        );
       }
-      
+
       formatted.writeln('');
-      
+
       // Payment
       if (receiptData.containsKey('payment')) {
         var payment = receiptData['payment'];
@@ -273,15 +286,19 @@ class PrinterService extends GetxService {
         double amount = (payment['amount'] ?? calculatedTotal).toDouble();
         String currency = payment['currency'] ?? 'LAK';
         String rate = payment['exchangeRate'] ?? '1 LAK = K1.00';
-        
-        formatted.writeln('$method${' ' * (25 - method.length)}K${amount.toStringAsFixed(3)}');
-        formatted.writeln('Amount ($currency)${' ' * 16}K${amount.toStringAsFixed(3)}');
+
+        formatted.writeln(
+          '$method${' ' * (25 - method.length)}K${amount.toStringAsFixed(3)}',
+        );
+        formatted.writeln(
+          'Amount ($currency)${' ' * 16}K${amount.toStringAsFixed(3)}',
+        );
         formatted.writeln('Exchange Rate${' ' * 19}$rate');
       }
-      
+
       formatted.writeln('.........................................');
       formatted.writeln('');
-      
+
       // Footer
       if (receiptData.containsKey('footer')) {
         var footer = receiptData['footer'];
@@ -295,11 +312,10 @@ class PrinterService extends GetxService {
         formatted.writeln('    Thank you for your business!');
         formatted.writeln('         Please come again');
       }
-      
+
       formatted.writeln('');
-      
+
       return formatted.toString();
-      
     } catch (e) {
       print('Error formatting structured receipt data: $e');
       return 'Error formatting receipt data: $e';
@@ -307,29 +323,34 @@ class PrinterService extends GetxService {
   }
 
   /// Complete workflow: Image -> Data -> Formatted Receipt
-  Future<Map<String, dynamic>> processReceiptImageToFormattedData(String imageInput, {bool isBase64 = true}) async {
+  Future<Map<String, dynamic>> processReceiptImageToFormattedData(
+    String imageInput, {
+    bool isBase64 = true,
+  }) async {
     try {
       print('Starting complete receipt image processing workflow...');
-      
+
       // Step 1: Extract data from image
-      Map<String, dynamic> extractedData = await formatReceiptFromImage(imageInput, isBase64: isBase64);
-      
+      Map<String, dynamic> extractedData = await formatReceiptFromImage(
+        imageInput,
+        isBase64: isBase64,
+      );
+
       if (extractedData.containsKey('error')) {
         return extractedData; // Return error if extraction failed
       }
-      
+
       // Step 2: Format the structured data back to printable text
       String formattedText = formatStructuredReceiptData(extractedData);
-      
+
       // Step 3: Return complete result
       return {
         'success': true,
         'extractedData': extractedData,
         'formattedText': formattedText,
         'processedAt': DateTime.now().toIso8601String(),
-        'workflow': 'image_to_data_to_formatted_text'
+        'workflow': 'image_to_data_to_formatted_text',
       };
-      
     } catch (e) {
       print('Error in complete receipt processing workflow: $e');
       return {
@@ -341,7 +362,11 @@ class PrinterService extends GetxService {
   }
 
   /// Resize image to specified dimensions
-  Future<Uint8List> resizeImage(Uint8List imageBytes, {int? width, int? height}) async {
+  Future<Uint8List> resizeImage(
+    Uint8List imageBytes, {
+    int? width,
+    int? height,
+  }) async {
     try {
       // Decode the image
       ui.Codec codec = await ui.instantiateImageCodec(imageBytes);
@@ -368,7 +393,12 @@ class PrinterService extends GetxService {
       // Draw the image with new dimensions
       canvas.drawImageRect(
         originalImage,
-        ui.Rect.fromLTWH(0, 0, originalImage.width.toDouble(), originalImage.height.toDouble()),
+        ui.Rect.fromLTWH(
+          0,
+          0,
+          originalImage.width.toDouble(),
+          originalImage.height.toDouble(),
+        ),
         ui.Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
         ui.Paint(),
       );
@@ -378,11 +408,13 @@ class PrinterService extends GetxService {
       ui.Image resizedImage = await picture.toImage(targetWidth, targetHeight);
 
       // Convert to bytes
-      ByteData? byteData = await resizedImage.toByteData(format: ui.ImageByteFormat.png);
-      
+      ByteData? byteData = await resizedImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+
       originalImage.dispose();
       resizedImage.dispose();
-      
+
       return byteData!.buffer.asUint8List();
     } catch (e) {
       print('Error resizing image: $e');
@@ -390,7 +422,11 @@ class PrinterService extends GetxService {
     }
   }
 
-  Future<bool> printImageFromBase64(String base64Image, {int? width, int? height}) async {
+  Future<bool> printImageFromBase64(
+    String base64Image, {
+    int? width,
+    int? height,
+  }) async {
     try {
       // Remove data URL prefix if present (data:image/png;base64,)
       String cleanBase64 = base64Image;
@@ -404,7 +440,11 @@ class PrinterService extends GetxService {
       // Resize image if dimensions are provided
       if (width != null || height != null) {
         print('Resizing image to width: $width, height: $height');
-        imageBytes = await resizeImage(imageBytes, width: width, height: height);
+        imageBytes = await resizeImage(
+          imageBytes,
+          width: width,
+          height: height,
+        );
         print('Image resized successfully: ${imageBytes.length} bytes');
       }
 
@@ -418,7 +458,9 @@ class PrinterService extends GetxService {
           align: SunmiPrintAlign.CENTER,
         );
 
-        await sunmiPrinterPlus.printText(text: ''); // Add line break after image
+        await sunmiPrinterPlus.printText(
+          text: '',
+        ); // Add line break after image
         print('Image printed successfully');
         return true;
       } catch (imageError) {
@@ -447,13 +489,13 @@ class PrinterService extends GetxService {
     int? imageHeight,
   }) async {
     try {
-      print('Printing receipt from JSON data...');
-      
+      log("12345: $receiptData");
+
       // Format the receipt using the new formatter with Sunmi optimization
       final formattedText = ReceiptFormatter.formatReceiptForSunmi(receiptData);
-      
+
       bool hasContent = false;
-      
+
       // Print image if provided
       if (base64Image != null && base64Image.isNotEmpty) {
         try {
@@ -461,13 +503,17 @@ class PrinterService extends GetxService {
           if (base64Image.contains(',')) {
             cleanBase64 = base64Image.split(',').last;
           }
-          
+
           Uint8List imageBytes = base64Decode(cleanBase64);
-          
+
           if (imageWidth != null || imageHeight != null) {
-            imageBytes = await resizeImage(imageBytes, width: imageWidth, height: imageHeight);
+            imageBytes = await resizeImage(
+              imageBytes,
+              width: imageWidth,
+              height: imageHeight,
+            );
           }
-          
+
           await sunmiPrinterPlus.printImage(
             imageBytes,
             align: SunmiPrintAlign.CENTER,
@@ -479,56 +525,53 @@ class PrinterService extends GetxService {
           await sunmiPrinterPlus.printText(text: '[IMAGE PRINT ERROR]');
         }
       }
-      
+
       // Print the formatted receipt text with Sunmi-specific formatting
       if (formattedText.isNotEmpty) {
         final lines = formattedText.split('\n');
         for (String line in lines) {
-            if (line.trim().isNotEmpty) {
-              await sunmiPrinterPlus.printText(text: line);
-            } else {
-              await sunmiPrinterPlus.printText(text: '');
-            }
+          if (line.trim().isNotEmpty) {
+            await sunmiPrinterPlus.printText(text: line);
+          } else {
+            await sunmiPrinterPlus.printText(text: '');
           }
+        }
         hasContent = true;
       }
-      
+
       // Cut paper if requested
       if (cutPaper && hasContent) {
         await sunmiPrinterPlus.printText(text: '');
         await sunmiPrinterPlus.printText(text: '');
       }
-      
-      print('Receipt printed successfully from JSON data with Sunmi formatting');
+
+      print(
+        'Receipt printed successfully from JSON data with Sunmi formatting',
+      );
       return hasContent;
     } catch (e) {
       print('Error printing receipt from JSON: $e');
       return false;
     }
   }
-  
+
   /// Print receipt with image and text (legacy method)
   Future<bool> printReceipt({
     String? base64Image,
-    String? receiptText,
-    bool cutPaper = true,
+    Map<String, dynamic>? receiptData,
+    // bool cutPaper = true,
     int? imageWidth,
     int? imageHeight,
   }) async {
     try {
-      print(
-        'Printing receipt - Image: ${base64Image != null}, Text: ${receiptText != null}, Cut: $cutPaper',
+      // Use the improved receipt formatter
+      final formattedText = ReceiptFormatter.formatReceiptForSunmi(
+        receiptData!,
       );
 
       bool hasContent = false;
 
-      // Print header
-      await sunmiPrinterPlus.printText(text: '=============================');
-      await sunmiPrinterPlus.printText(text: '         RECEIPT');
-      await sunmiPrinterPlus.printText(text: '=============================');
-      await sunmiPrinterPlus.printText(text: '');
-
-      // Print image if provided
+      // Print business logo first if provided
       if (base64Image != null && base64Image.isNotEmpty) {
         try {
           String cleanBase64 = base64Image;
@@ -538,19 +581,31 @@ class PrinterService extends GetxService {
 
           // Decode base64 to bytes
           Uint8List imageBytes = base64Decode(cleanBase64);
-          
+
           // Resize image if dimensions are provided
           if (imageWidth != null || imageHeight != null) {
-            print('Resizing receipt image to width: $imageWidth, height: $imageHeight');
-            imageBytes = await resizeImage(imageBytes, width: imageWidth, height: imageHeight);
-            print('Receipt image resized successfully: ${imageBytes.length} bytes');
+            print(
+              'Resizing receipt image to width: $imageWidth, height: $imageHeight',
+            );
+            imageBytes = await resizeImage(
+              imageBytes,
+              width: imageWidth,
+              height: imageHeight,
+            );
+            print(
+              'Receipt image resized successfully: ${imageBytes.length} bytes',
+            );
           }
-          
+
           print('Printing receipt image: ${imageBytes.length} bytes');
 
-          // Print the image
+          // Get logo URL from restaurant info
+          final logoUrl =
+              receiptData['receiptData']?['restaurantInfo']?['logo'] ?? '';
+
+          // Print the image (business logo)
           await sunmiPrinterPlus.printImage(
-            imageBytes,
+            logoUrl,
             align: SunmiPrintAlign.CENTER,
           );
           await sunmiPrinterPlus.printText(text: '');
@@ -564,36 +619,18 @@ class PrinterService extends GetxService {
           await sunmiPrinterPlus.printText(text: '');
         }
       }
-      
-      // Print text if provided
-      if (receiptText != null && receiptText.isNotEmpty) {
-        await sunmiPrinterPlus.printText(text: receiptText);
-        await sunmiPrinterPlus.printText(text: '');
+
+      // Print the formatted receipt text
+      if (formattedText.isNotEmpty) {
+        final lines = formattedText.split('\n');
+        for (String line in lines) {
+          await sunmiPrinterPlus.printText(text: line);
+        }
         hasContent = true;
       }
 
-      // Print footer
-      await sunmiPrinterPlus.printText(text: '=============================');
-      await sunmiPrinterPlus.printText(
-        text:
-            'Date: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-      );
-      await sunmiPrinterPlus.printText(
-        text:
-            'Time: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-      );
-      await sunmiPrinterPlus.printText(text: '=============================');
-      await sunmiPrinterPlus.printText(text: '');
-      await sunmiPrinterPlus.printText(text: '');
-
-      // Add extra space if cutting paper
-      if (cutPaper) {
-        await sunmiPrinterPlus.printText(text: '');
-        await sunmiPrinterPlus.printText(text: '');
-      }
-
       if (hasContent) {
-        print('Receipt printed successfully');
+        print('Receipt printed successfully using improved formatter');
         return true;
       } else {
         print('No content to print');
@@ -628,10 +665,10 @@ class PrinterService extends GetxService {
 
       // Parse and format the text data according to receipt structure
       String formattedText = _formatReceiptText(text);
-      
+
       // Split into lines and print each line
       List<String> lines = formattedText.split('\n');
-      
+
       for (String line in lines) {
         if (line.trim().isNotEmpty) {
           await sunmiPrinterPlus.printText(text: line);
@@ -639,7 +676,7 @@ class PrinterService extends GetxService {
           await sunmiPrinterPlus.printText(text: '');
         }
       }
-      
+
       print('Formatted text printed successfully');
     } catch (e) {
       print('Error printing text: $e');
@@ -652,7 +689,7 @@ class PrinterService extends GetxService {
   String _formatReceiptText(String data) {
     try {
       // If data is already formatted (contains specific receipt markers), return as-is
-      if (data.contains('=============================') || 
+      if (data.contains('=============================') ||
           data.contains('Order Items') ||
           data.contains('Thank you for your business!')) {
         return data;
@@ -675,87 +712,101 @@ class PrinterService extends GetxService {
       formatted.writeln('    ร้านกาแฟเมืองเก่า');
       formatted.writeln('    0205107679');
       formatted.writeln('');
-      
+
       // System info
-       if (receiptData?.containsKey('system') == true) {
-         formatted.writeln('APPZAP V2 PROD');
-         formatted.writeln('*ทดสอบใช้งานระบบ*');
-         formatted.writeln(receiptData!['system']['orderId'] ?? '0205107679');
-       }
-       formatted.writeln('');
-       
-       // Queue number
-       if (receiptData?.containsKey('queue') == true) {
-         formatted.writeln('Q: ${receiptData!['queue']}');
-       } else {
-         formatted.writeln('Q: 5');
-       }
-       formatted.writeln('');
-       
-       // Date/Time and server info
-       final now = DateTime.now();
-       formatted.writeln('Date/Time: ${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute.toString().padLeft(2, '0')}');
-       
-       if (receiptData?.containsKey('server') == true) {
-         formatted.writeln('Served by: ${receiptData!['server']}');
-       }
-       
-       if (receiptData?.containsKey('order') == true) {
-         var order = receiptData!['order'];
-         formatted.writeln('Order ID: ${order['id']}');
-         formatted.writeln('Txt ID: ${order['txtId']}');
-       }
-      
+      if (receiptData?.containsKey('system') == true) {
+        formatted.writeln('APPZAP V2 PROD');
+        formatted.writeln('*ทดสอบใช้งานระบบ*');
+        formatted.writeln(receiptData!['system']['orderId'] ?? '0205107679');
+      }
+      formatted.writeln('');
+
+      // Queue number
+      if (receiptData?.containsKey('queue') == true) {
+        formatted.writeln('Q: ${receiptData!['queue']}');
+      } else {
+        formatted.writeln('Q: 5');
+      }
+      formatted.writeln('');
+
+      // Date/Time and server info
+      final now = DateTime.now();
+      formatted.writeln(
+        'Date/Time: ${now.day}/${now.month}/${now.year} ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+      );
+
+      if (receiptData?.containsKey('server') == true) {
+        formatted.writeln('Served by: ${receiptData!['server']}');
+      }
+
+      if (receiptData?.containsKey('order') == true) {
+        var order = receiptData!['order'];
+        formatted.writeln('Order ID: ${order['id']}');
+        formatted.writeln('Txt ID: ${order['txtId']}');
+      }
+
       formatted.writeln('.........................................');
       formatted.writeln('            Order Items');
       formatted.writeln('.........................................');
-      
+
       // Items
-       double subtotal = 0.0;
-       if (receiptData?.containsKey('items') == true) {
-         List items = receiptData!['items'];
-         for (var item in items) {
-           String name = item['name'] ?? '';
-           int qty = item['quantity'] ?? 1;
-           double price = (item['price'] ?? 0.0).toDouble();
-           double total = qty * price;
-           subtotal += total;
-           
-           formatted.writeln('$qty x $name${' ' * (25 - name.length)}K${total.toStringAsFixed(3)}');
-         }
-       } else {
-         // Default items from visual reference
-         formatted.writeln('1 x Irish Coffee${' ' * 12}K22.000');
-         formatted.writeln('1 x Latte${' ' * 18}K32.000');
-         formatted.writeln('1 x Corretto${' ' * 15}K30.000');
-         formatted.writeln('1 x Coffee Breve${' ' * 11}K39.000');
-         subtotal = 123.0;
-       }
-       
-       formatted.writeln('');
-       formatted.writeln('.........................................');
-       formatted.writeln('Subtotal${' ' * 20}K${subtotal.toStringAsFixed(3)}');
-       formatted.writeln('Total${' ' * 23}K${subtotal.toStringAsFixed(3)}');
-       formatted.writeln('');
-       
-       // Payment info
-       if (receiptData?.containsKey('payment') == true) {
-         var payment = receiptData!['payment'];
-         formatted.writeln('${payment['method'] ?? 'BANK_TRANSFER'}${' ' * 15}K${subtotal.toStringAsFixed(3)}');
-         formatted.writeln('Amount (LAK)${' ' * 16}K${subtotal.toStringAsFixed(3)}');
-         formatted.writeln('Exchange Rate${' ' * 19}${payment['rate'] ?? '1 LAK = K1.00'}');
-       } else {
-         formatted.writeln('BANK_TRANSFER${' ' * 15}K${subtotal.toStringAsFixed(3)}');
-         formatted.writeln('Amount (LAK)${' ' * 16}K${subtotal.toStringAsFixed(3)}');
-         formatted.writeln('Exchange Rate${' ' * 19}1 LAK = K1.00');
-       }
-      
+      double subtotal = 0.0;
+      if (receiptData?.containsKey('items') == true) {
+        List items = receiptData!['items'];
+        for (var item in items) {
+          String name = item['name'] ?? '';
+          int qty = item['quantity'] ?? 1;
+          double price = (item['price'] ?? 0.0).toDouble();
+          double total = qty * price;
+          subtotal += total;
+
+          formatted.writeln(
+            '$qty x $name${' ' * (25 - name.length)}K${total.toStringAsFixed(3)}',
+          );
+        }
+      } else {
+        // Default items from visual reference
+        formatted.writeln('1 x Irish Coffee${' ' * 12}K22.000');
+        formatted.writeln('1 x Latte${' ' * 18}K32.000');
+        formatted.writeln('1 x Corretto${' ' * 15}K30.000');
+        formatted.writeln('1 x Coffee Breve${' ' * 11}K39.000');
+        subtotal = 123.0;
+      }
+
+      formatted.writeln('');
+      formatted.writeln('.........................................');
+      formatted.writeln('Subtotal${' ' * 20}K${subtotal.toStringAsFixed(3)}');
+      formatted.writeln('Total${' ' * 23}K${subtotal.toStringAsFixed(3)}');
+      formatted.writeln('');
+
+      // Payment info
+      if (receiptData?.containsKey('payment') == true) {
+        var payment = receiptData!['payment'];
+        formatted.writeln(
+          '${payment['method'] ?? 'BANK_TRANSFER'}${' ' * 15}K${subtotal.toStringAsFixed(3)}',
+        );
+        formatted.writeln(
+          'Amount (LAK)${' ' * 16}K${subtotal.toStringAsFixed(3)}',
+        );
+        formatted.writeln(
+          'Exchange Rate${' ' * 19}${payment['rate'] ?? '1 LAK = K1.00'}',
+        );
+      } else {
+        formatted.writeln(
+          'BANK_TRANSFER${' ' * 15}K${subtotal.toStringAsFixed(3)}',
+        );
+        formatted.writeln(
+          'Amount (LAK)${' ' * 16}K${subtotal.toStringAsFixed(3)}',
+        );
+        formatted.writeln('Exchange Rate${' ' * 19}1 LAK = K1.00');
+      }
+
       formatted.writeln('.........................................');
       formatted.writeln('');
       formatted.writeln('    Thank you for your business!');
       formatted.writeln('         Please come again');
       formatted.writeln('');
-      
+
       return formatted.toString();
     } catch (e) {
       print('Error formatting receipt text: $e');
@@ -766,23 +817,25 @@ class PrinterService extends GetxService {
   /// Format plain text with basic structure
   String _formatPlainText(String text) {
     StringBuffer formatted = StringBuffer();
-    
+
     // Add basic receipt header
     formatted.writeln('=============================');
     formatted.writeln('         RECEIPT');
     formatted.writeln('=============================');
     formatted.writeln('');
-    
+
     // Add the text content
     formatted.writeln(text);
     formatted.writeln('');
-    
+
     // Add timestamp
     final now = DateTime.now();
     formatted.writeln('Date: ${now.day}/${now.month}/${now.year}');
-    formatted.writeln('Time: ${now.hour}:${now.minute.toString().padLeft(2, '0')}');
+    formatted.writeln(
+      'Time: ${now.hour}:${now.minute.toString().padLeft(2, '0')}',
+    );
     formatted.writeln('=============================');
-    
+
     return formatted.toString();
   }
 
@@ -804,7 +857,11 @@ class PrinterService extends GetxService {
         // Resize image if dimensions are provided
         if (width != null || height != null) {
           print('Resizing logo image to width: $width, height: $height');
-          imageBytes = await resizeImage(imageBytes, width: width, height: height);
+          imageBytes = await resizeImage(
+            imageBytes,
+            width: width,
+            height: height,
+          );
           print('Logo image resized successfully: ${imageBytes.length} bytes');
         }
 
@@ -814,7 +871,9 @@ class PrinterService extends GetxService {
 
           // Print description if custom size was requested
           if (width != null || height != null) {
-            print('Printing with requested size: ${width ?? 'auto'}x${height ?? 'auto'}');
+            print(
+              'Printing with requested size: ${width ?? 'auto'}x${height ?? 'auto'}',
+            );
             await sunmiPrinterPlus.printText(
               text: '--- RESIZED FLUTTER LOGO ---',
             );
@@ -925,6 +984,80 @@ class PrinterService extends GetxService {
   }
 
   /// Test printer with sample receipt
+  /// Create mock receipt data based on the actual receipt image
+  Map<String, dynamic> _createMockReceiptData() {
+    return {
+      "receiptData": {
+        "order": {
+          "orderId": "45b0bbed",
+          "qNumber": 25,
+          "timing": {"orderedAt": "2025-08-27T18:50:00Z"},
+          "staff": {
+            "server": {"name": "appzapv2"},
+          },
+          "lineItems": [
+            {
+              "name": "Espresso",
+              "quantity": 1,
+              "unitPrice": {"amount": 30.000, "currency": "LAK"},
+              "lineTotal": {"amount": 30.000, "currency": "LAK"},
+            },
+            {
+              "name": "Flat White",
+              "quantity": 1,
+              "unitPrice": {"amount": 20.000, "currency": "LAK"},
+              "lineTotal": {"amount": 20.000, "currency": "LAK"},
+            },
+          ],
+          "pricing": {
+            "subtotal": {"amount": 50.000, "currency": "LAK"},
+            "totalDue": {"amount": 50.000, "currency": "LAK"},
+          },
+          "transaction": {
+            "transactionId": "02648300",
+            "payments": [
+              {
+                "method": "BANK_TRANSFER",
+                "customerAmount": {"amount": 50.000, "currency": "LAK"},
+              },
+            ],
+          },
+        },
+        "restaurantInfo": {
+          "contactInfo": {"phone": "0205107679"},
+        },
+      },
+    };
+  }
+
+  /// Test printer with mock receipt data that matches the actual receipt image
+  Future<bool> testPrinterWithMockReceipt() async {
+    try {
+      print('Running printer test with mock receipt data...');
+
+      // Create mock receipt data
+      Map<String, dynamic> mockReceiptData = _createMockReceiptData();
+
+      // Print the receipt using the new formatter
+      bool success = await printReceiptFromJson(
+        receiptData: mockReceiptData,
+        cutPaper: true,
+      );
+
+      if (success) {
+        print('Mock receipt printed successfully!');
+        return true;
+      } else {
+        print('Failed to print mock receipt');
+        return false;
+      }
+    } catch (e) {
+      print('Error in test printer with mock receipt: $e');
+      return false;
+    }
+  }
+
+  /// Test printer with basic functionality
   Future<bool> testPrinter() async {
     try {
       print('Running printer test...');
@@ -984,6 +1117,302 @@ class PrinterService extends GetxService {
     } catch (e) {
       print('Error in test printer: $e');
       return false;
+    }
+  }
+
+  /// Downloads and processes logo image from URL to Uint8List for printing
+  Future<Uint8List?> _downloadAndProcessLogo(String logoUrl) async {
+    try {
+      // Download the image from URL
+      final response = await http.get(Uri.parse(logoUrl));
+      if (response.statusCode != 200) {
+        print('Failed to download logo: ${response.statusCode}');
+        return null;
+      }
+
+      // Decode the image
+      img.Image? originalImage = img.decodeImage(response.bodyBytes);
+      if (originalImage == null) {
+        print('Failed to decode logo image');
+        return null;
+      }
+
+      // Resize image to fit receipt printer (max width ~380 pixels for most thermal printers)
+      // Keep aspect ratio and resize to reasonable size for receipt
+      img.Image resizedImage = img.copyResize(
+        originalImage,
+        width: 200, // Adjust this value based on your printer's capabilities
+        height: -1, // Maintain aspect ratio
+        interpolation: img.Interpolation.linear,
+      );
+
+      // Convert to grayscale for better thermal printing
+      img.Image grayscaleImage = img.grayscale(resizedImage);
+
+      // Encode as PNG
+      Uint8List imageBytes = Uint8List.fromList(img.encodePng(grayscaleImage));
+
+      return imageBytes;
+    } catch (e) {
+      print('Error processing logo image: $e');
+      return null;
+    }
+  }
+
+  Future printData({required Map<String, dynamic> receiptData}) async {
+    try {
+      Map<String, dynamic>? order;
+      Map<String, dynamic>? restaurantInfo;
+      Map<String, dynamic>? transaction;
+      String? logoUrl;
+
+      if (receiptData.containsKey('receiptData')) {
+        // Data is wrapped in receiptData object (like receipt.json)
+        order = receiptData['receiptData']?['order'];
+        restaurantInfo = receiptData['restaurantInfo'];
+        transaction = receiptData['receiptData']?['transaction'];
+        logoUrl = receiptData['restaurantInfo']?['logo'];
+      } else {
+        // Data structure has order at root level
+        order = receiptData['order'] ?? receiptData;
+        restaurantInfo = receiptData['restaurantInfo'];
+        transaction = receiptData['transaction'];
+        logoUrl = receiptData['restaurantInfo']?['logo'];
+      }
+
+      // Print logo if available
+      if (logoUrl != null && logoUrl.isNotEmpty) {
+        Uint8List? logoBytes = await _downloadAndProcessLogo(logoUrl);
+        if (logoBytes != null) {
+          await sunmiPrinterPlus.printImage(
+            logoBytes,
+            align: SunmiPrintAlign.CENTER,
+          );
+          await sunmiPrinterPlus.printText(text: '');
+        }
+      }
+
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '        ${restaurantInfo?['name']}',
+      );
+      await sunmiPrinterPlus.printText(
+        text: '       ${restaurantInfo?['slogan']}',
+      );
+      await sunmiPrinterPlus.printText(
+        text: '           ${restaurantInfo?['contactInfo']?['phone'] ?? '-'}',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Restaurant name and system info
+      // await sunmiPrinterPlus.printText(text: 'APPZAP V2 PROD');
+      // await sunmiPrinterPlus.printText(text: '*ทดสอบใช้งานระบบ*');
+      // await sunmiPrinterPlus.printText(
+      //   text: restaurantInfo?['contactInfo']?['phone'] ?? '0205107679',
+      // );
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Queue number
+      await sunmiPrinterPlus.printText(
+        text: '             Q:${order?['qNumber'] ?? '0'}',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Date/Time and server info
+      String orderedAt = order?['timing']?['orderedAt'] ?? '';
+      if (orderedAt.isNotEmpty) {
+        DateTime orderTime = DateTime.parse(orderedAt);
+        String formattedDate =
+            '${orderTime.day}/${orderTime.month}/${orderTime.year} ${orderTime.hour}:${orderTime.minute.toString().padLeft(2, '0')}';
+        await sunmiPrinterPlus.printText(text: 'Date/Time: $formattedDate');
+      }
+
+      String serverName = order?['staff']?['server']?['name'] ?? '';
+      if (serverName.isNotEmpty) {
+        await sunmiPrinterPlus.printText(text: 'Served by: $serverName');
+      }
+
+      String orderId = order?['orderId'] ?? '';
+      if (orderId.isNotEmpty) {
+        // Take last 8 characters for display
+        String shortOrderId = orderId.length > 8
+            ? orderId.substring(orderId.length - 8)
+            : orderId;
+        await sunmiPrinterPlus.printText(text: 'Order ID: $shortOrderId');
+      }
+
+      String transactionId = transaction?['transactionId'] ?? '';
+      if (transactionId.isNotEmpty) {
+        // Take last 8 characters for display
+        String shortTxnId = transactionId.length > 8
+            ? transactionId.substring(transactionId.length - 8)
+            : transactionId;
+        await sunmiPrinterPlus.printText(text: 'Txt ID: $shortTxnId');
+      }
+
+      // Order items section
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+      await sunmiPrinterPlus.printText(text: '          Order Items');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Print line items with improved spacing
+      List<dynamic> lineItems = order?['lineItems'] ?? [];
+      String currency = order?['pricing']?['currency'] ?? 'LAK';
+
+      for (var item in lineItems) {
+        String name = item['name'] ?? '';
+        int quantity = item['quantity'] ?? 1;
+        double unitPrice = (item['unitPrice']?['amount'] ?? 0.0).toDouble();
+
+        // Format price with K prefix for LAK currency
+        String priceDisplay = currency == 'LAK'
+            ? 'K${unitPrice.toStringAsFixed(0)}'
+            : '${unitPrice.toStringAsFixed(0)} $currency';
+
+        // Create the item line with better spacing
+        String itemLine = '$quantity x $name';
+
+        // Calculate available space for dots/spaces
+        const int maxLineLength = 31; // Adjusted for better fit
+        int availableSpace =
+            maxLineLength - itemLine.length - priceDisplay.length;
+
+        // Ensure minimum spacing
+        if (availableSpace < 2) {
+          availableSpace = 2;
+        }
+
+        // Create spacing with dots
+        String spacing = ' ' * availableSpace;
+
+        // Print the formatted line
+        await sunmiPrinterPlus.printText(
+          text: '$itemLine$spacing$priceDisplay',
+        );
+
+        // Add a small gap between items for better readability
+        if (lineItems.indexOf(item) < lineItems.length - 1) {
+          // Only add space if not the last item
+        }
+      }
+
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Totals section with improved alignment
+      double subtotal = (order?['pricing']?['subtotal']?['amount'] ?? 0.0)
+          .toDouble();
+      double totalDue = (order?['pricing']?['totalDue']?['amount'] ?? 0.0)
+          .toDouble();
+
+      String subtotalDisplay = currency == 'LAK'
+          ? 'K${subtotal.toStringAsFixed(0)}'
+          : '${subtotal.toStringAsFixed(0)} $currency';
+      String totalDisplay = currency == 'LAK'
+          ? 'K${totalDue.toStringAsFixed(0)}'
+          : '${totalDue.toStringAsFixed(0)} $currency';
+
+      // Format subtotal line with dot spacing (matching item format)
+      String subtotalLine = 'Subtotal';
+      const int totalLineLength = 32;
+      int subtotalDotsNeeded =
+          totalLineLength - subtotalLine.length - subtotalDisplay.length;
+
+      // Ensure minimum spacing with dots
+      if (subtotalDotsNeeded < 2) {
+        subtotalDotsNeeded = 2;
+      }
+
+      String subtotalDots = ' ' * subtotalDotsNeeded;
+
+      await sunmiPrinterPlus.printText(
+        text: '$subtotalLine$subtotalDots$subtotalDisplay',
+      );
+
+      // Format total line with dot spacing (matching item format)
+      String totalLine = 'Total';
+      int totalDotsNeeded =
+          totalLineLength - totalLine.length - totalDisplay.length;
+
+      // Ensure minimum spacing with dots
+      if (totalDotsNeeded < 2) {
+        totalDotsNeeded = 2;
+      }
+
+      String totalDots = ' ' * totalDotsNeeded;
+
+      await sunmiPrinterPlus.printText(
+        text: '$totalLine$totalDots$totalDisplay',
+      );
+
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Payment information with improved alignment
+      List<dynamic> payments = transaction?['payments'] ?? [];
+      if (payments.isNotEmpty) {
+        var payment = payments[0];
+        String paymentMethod =
+            payment['method']?.toString().toUpperCase() ?? 'BANK_TRANSFER';
+        double paidAmount = (payment['customerAmount']?['amount'] ?? 0.0)
+            .toDouble();
+        String paidDisplay = currency == 'LAK'
+            ? 'K${paidAmount.toStringAsFixed(0)}'
+            : '${paidAmount.toStringAsFixed(2)} $currency';
+
+        // Payment method line with dot spacing (matching other lines)
+        int paymentDotsNeeded =
+            totalLineLength - paymentMethod.length - paidDisplay.length;
+
+        // Ensure minimum spacing with dots
+        if (paymentDotsNeeded < 2) {
+          paymentDotsNeeded = 2;
+        }
+
+        String paymentDots = ' ' * paymentDotsNeeded;
+
+        await sunmiPrinterPlus.printText(
+          text: '$paymentMethod$paymentDots$paidDisplay',
+        );
+      }
+
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Customer info if available
+      String customerName = order?['customer']?['name'] ?? '';
+      if (customerName.isNotEmpty && customerName != 'Walk-in Customer') {
+        await sunmiPrinterPlus.printText(text: customerName);
+        String customerPhone = order?['customer']?['phone'] ?? '';
+        if (customerPhone.isNotEmpty && customerPhone != '000-000-0000') {
+          await sunmiPrinterPlus.printText(text: customerPhone);
+        }
+        await sunmiPrinterPlus.printText(text: '');
+      }
+
+      // Footer
+      await sunmiPrinterPlus.printText(
+        text: '             ${restaurantInfo?['shortDescription'] ?? ''}',
+      );
+      await sunmiPrinterPlus.printText(text: '                       ');
+      await sunmiPrinterPlus.printText(text: '                       ');
+      await sunmiPrinterPlus.printText(text: '                       ');
+    } catch (e) {
+      print('Error printing data: $e');
     }
   }
 }

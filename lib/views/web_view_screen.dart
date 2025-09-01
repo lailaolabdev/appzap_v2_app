@@ -68,7 +68,7 @@ class WebViewScreen extends StatelessWidget {
       // floatingActionButton: FloatingActionButton.extended(
       //   onPressed: () async {
       //     final controller = Get.find<WebViewController>();
-      //     await controller.printerService.printLogoImage();
+      //     await controller.printerService.testPrinterWithMockReceipt();
       //     // final status = await controller.printerService.getPrinterStatus();
 
       //     // Get.dialog(

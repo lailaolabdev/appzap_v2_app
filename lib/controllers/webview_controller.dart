@@ -70,35 +70,21 @@ class WebViewController extends GetxController {
           if (arguments.isNotEmpty) {
             final data = arguments[0] as Map<String, dynamic>;
 
-            log("Received receipt data: $data");
+            log('Received receipt data: ${data.toString()}');
 
-            // Extract parameters from the data
-            String? base64Image = data['imageBuffer'] as String? ?? data['image'] as String?;
-            Map<String, dynamic>? receiptData = data['receiptData'] as Map<String, dynamic>?;
-            bool cutPaper = data['cutPaper'] as bool? ?? true;
-            int? imageWidth = data['imageWidth'] as int?;
-            int? imageHeight = data['imageHeight'] as int?;
-
-            // Validate that we have receipt data
-            if (receiptData == null) {
-              log("No receipt data found in request");
-              return {
-                "status": "error", 
-                "message": "No receipt data provided",
-                "timestamp": DateTime.now().toIso8601String(),
-              };
+            // Optional: Validate the data structure
+            if (data.containsKey('receiptData') || data.containsKey('order')) {
+              log("Valid receipt data structure detected");
+            } else {
+              log("Warning: Unexpected receipt data structure");
             }
 
-            // Use the new JSON-based printing method
-            final success = await printerService.printReceiptFromJson(
-              receiptData: receiptData,
-              base64Image: base64Image,
-              cutPaper: cutPaper,
-              imageWidth: imageWidth,
-              imageHeight: imageHeight,
-            );
+            // Use the new JSON-based printing method with parsed data
+            // final success = await printerService.printReceiptFromJson(
+            //   receiptData: data,
+            // );
 
-            log("Print result: ${success ? 'success' : 'failed'}");
+            final success = await printerService.printData(receiptData: data);
 
             return {
               "status": success ? "success" : "error",
@@ -106,32 +92,23 @@ class WebViewController extends GetxController {
                   ? "Receipt printed successfully"
                   : "Failed to print receipt",
               "timestamp": DateTime.now().toIso8601String(),
-              "data": {
-                "hasImage": base64Image != null,
-                "cutPaper": cutPaper,
-                "imageSize": imageWidth != null && imageHeight != null 
-                    ? "${imageWidth}x$imageHeight" 
-                    : "auto",
-              }
             };
           }
           return {
-            "status": "error", 
+            "status": "error",
             "message": "No receipt data provided",
             "timestamp": DateTime.now().toIso8601String(),
           };
         } catch (e) {
           log('Error in printReceipt handler: $e');
           return {
-            "status": "error", 
+            "status": "error",
             "message": "Print handler error: ${e.toString()}",
             "timestamp": DateTime.now().toIso8601String(),
           };
         }
       },
-    );
-
-    // Handler for getting printer status
+    ); // Handler for getting printer status
     webViewController?.addJavaScriptHandler(
       handlerName: 'getPrinterStatus',
       callback: (arguments) async {
@@ -181,6 +158,31 @@ class WebViewController extends GetxController {
                 ? "Printer test completed successfully"
                 : "Printer test failed",
             "timestamp": DateTime.now().toIso8601String(),
+          };
+        } catch (e) {
+          return {"status": "error", "message": e.toString()};
+        }
+      },
+    );
+
+    // Handler for testing printer with mock receipt
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'testMockReceipt',
+      callback: (arguments) async {
+        try {
+          final success = await printerService.testPrinterWithMockReceipt();
+
+          return {
+            "status": success ? "success" : "error",
+            "message": success
+                ? "Mock receipt printed successfully"
+                : "Mock receipt print failed",
+            "timestamp": DateTime.now().toIso8601String(),
+            "data": {
+              "receiptType": "Mock MuK Coffee Receipt",
+              "items": ["1x Espresso K30.000", "1x Flat White K20.000"],
+              "total": "K50.000",
+            },
           };
         } catch (e) {
           return {"status": "error", "message": e.toString()};
