@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import '../services/printer_service.dart';
@@ -270,6 +271,83 @@ class WebViewController extends GetxController {
   /// Execute JavaScript in the web page
   Future<dynamic> executeJavaScript(String code) async {
     return await webViewController?.evaluateJavascript(source: code);
+  }
+
+  /// Handle WebView errors
+  void onWebViewError(WebResourceError error, WebResourceRequest request) {
+    // Log error for debugging
+    log('WebView Error Handled: ${error.description}');
+    log('Error Type: ${error.type}');
+    log('Failing URL: ${request.url}');
+    
+    // Update loading state
+    isLoading.value = false;
+    
+    // Determine error type and show appropriate user message
+    String userMessage = _getUserFriendlyErrorMessage(error);
+    
+    // Show error message with retry option for network errors
+    if (_isNetworkError(error)) {
+      Get.snackbar(
+        'Connection Error',
+        userMessage,
+        duration: Duration(seconds: 10),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        colorText: Get.theme.colorScheme.onError,
+        mainButton: TextButton(
+          onPressed: () {
+            Get.back(); // Close snackbar
+            reload(); // Retry loading
+          },
+          child: Text(
+            'Retry',
+            style: TextStyle(color: Get.theme.colorScheme.onError),
+          ),
+        ),
+      );
+    } else {
+      // Show general error message
+      Get.snackbar(
+        'Error',
+        userMessage,
+        duration: Duration(seconds: 8),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.8),
+        colorText: Get.theme.colorScheme.onError,
+      );
+    }
+  }
+  
+  /// Get user-friendly error message based on error type
+  String _getUserFriendlyErrorMessage(WebResourceError error) {
+    final errorCode = error.type.toString();
+    
+    if (errorCode.contains('HOST_LOOKUP') || errorCode.contains('NAME_NOT_RESOLVED')) {
+      return 'Unable to connect to the server. Please check your internet connection.';
+    } else if (errorCode.contains('CONNECT') || errorCode.contains('CONNECTION')) {
+      return 'Connection failed. The server might be temporarily unavailable.';
+    } else if (errorCode.contains('TIMEOUT')) {
+      return 'Request timed out. The server is taking too long to respond.';
+    } else if (errorCode.contains('AUTHENTICATION') || errorCode.contains('AUTH')) {
+      return 'Authentication required. Please check your credentials.';
+    } else if (errorCode.contains('FILE_NOT_FOUND') || errorCode.contains('404')) {
+      return 'The requested page was not found.';
+    } else if (errorCode.contains('TOO_MANY_REQUESTS') || errorCode.contains('429')) {
+      return 'Too many requests. Please wait a moment and try again.';
+    } else {
+      return 'An error occurred while loading the page: ${error.description}';
+    }
+  }
+  
+  /// Check if the error is a network-related error that can be retried
+  bool _isNetworkError(WebResourceError error) {
+    final errorCode = error.type.toString();
+    return errorCode.contains('HOST_LOOKUP') ||
+           errorCode.contains('NAME_NOT_RESOLVED') ||
+           errorCode.contains('CONNECT') ||
+           errorCode.contains('CONNECTION') ||
+           errorCode.contains('TIMEOUT');
   }
 
   /// Show JavaScript communication example
