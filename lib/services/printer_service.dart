@@ -1166,6 +1166,8 @@ class PrinterService extends GetxService {
       Map<String, dynamic>? transaction;
       String? logoUrl;
 
+      log('Receipt data: ${receiptData.toString()}');
+
       if (receiptData.containsKey('receiptData')) {
         // Data is wrapped in receiptData object (like receipt.json)
         order = receiptData['receiptData']?['order'];
@@ -1229,10 +1231,10 @@ class PrinterService extends GetxService {
         await sunmiPrinterPlus.printText(text: 'Date/Time: $formattedDate');
       }
 
-      String serverName = order?['staff']?['server']?['name'] ?? '';
-      if (serverName.isNotEmpty) {
-        await sunmiPrinterPlus.printText(text: 'Served by: $serverName');
-      }
+      // String serverName = order?['staff']?['server']?['name'] ?? '';
+      // if (serverName.isNotEmpty) {
+      //   await sunmiPrinterPlus.printText(text: 'Served by: $serverName');
+      // }
 
       String orderId = order?['orderId'] ?? '';
       if (orderId.isNotEmpty) {
@@ -1265,42 +1267,196 @@ class PrinterService extends GetxService {
 
       // Print line items with improved spacing
       List<dynamic> lineItems = order?['lineItems'] ?? [];
-      String currency = order?['pricing']?['currency'] ?? 'LAK';
+
+      // Helpers to coerce values and format currency
+      double _toDouble(dynamic v) {
+        if (v == null) return 0.0;
+        if (v is num) return v.toDouble();
+        if (v is String) return double.tryParse(v) ?? 0.0;
+        return 0.0;
+      }
+
+      String orderCurrencyCode = (() {
+        final c = order?['currency'];
+        if (c is Map) return c['code']?.toString() ?? '';
+        if (c is String) return c;
+        final pc = order?['pricing']?['currency'];
+        if (pc is Map) return pc['code']?.toString() ?? '';
+        if (pc is String) return pc;
+        return '';
+      })();
+
+      String orderCurrencySymbol = (() {
+        final c = order?['currency'];
+        if (c is Map && c['symbol'] != null) return c['symbol'].toString();
+        final pc = order?['pricing']?['currency'];
+        if (pc is Map && pc['symbol'] != null) return pc['symbol'].toString();
+        switch (orderCurrencyCode) {
+          case 'USD':
+            return ' 4';
+          case 'LAK':
+            return 'K';
+          case 'THB':
+            return '฿';
+          default:
+            return '';
+        }
+      })();
+
+      // Fix incorrect default above and set proper symbol
+      if (orderCurrencySymbol.isEmpty) {
+        switch (orderCurrencyCode) {
+          case 'USD':
+            orderCurrencySymbol = ' 4' == '\u00024' ? ' 4' : ' 4';
+            orderCurrencySymbol = ' 4'; // dollar
+            break;
+          case 'LAK':
+            orderCurrencySymbol = 'K';
+            break;
+          case 'THB':
+            orderCurrencySymbol = ' 3f'; // baht
+            break;
+          default:
+            orderCurrencySymbol = '';
+        }
+      }
+
+      String _formatAmount(double amount, {String? code, String? symbol}) {
+        final useCode = code?.isNotEmpty == true ? code! : orderCurrencyCode;
+        final useSymbol = symbol?.isNotEmpty == true
+            ? symbol!
+            : orderCurrencySymbol;
+        if (useCode == 'LAK' || useSymbol == 'K') {
+          return 'K${amount.toStringAsFixed(0)}';
+        }
+        final sym = useSymbol.isNotEmpty
+            ? useSymbol
+            : (useCode.isNotEmpty ? useCode : '');
+        return sym.isEmpty
+            ? amount.toStringAsFixed(2)
+            : '$sym${amount.toStringAsFixed(2)}';
+      }
+
+      double computedSubtotal = 0.0;
 
       for (var item in lineItems) {
-        String name = item['name'] ?? '';
-        int quantity = item['quantity'] ?? 1;
-        double unitPrice = (item['unitPrice']?['amount'] ?? 0.0).toDouble();
+        String name = item['name']?.toString() ?? '';
+        int quantity = _toDouble(item['quantity']).round();
 
-        // Format price with K prefix for LAK currency
-        String priceDisplay = currency == 'LAK'
-            ? 'K${unitPrice.toStringAsFixed(0)}'
-            : '${unitPrice.toStringAsFixed(0)} $currency';
+        // unitPrice may be number or map {amount,currency}; or item.pricing
+        double unitPrice = (() {
+          final up = item['unitPrice'];
+          if (up is Map) return _toDouble(up['amount']);
+          if (up != null) return _toDouble(up);
+          final ip = item['pricing'];
+          if (ip is Map) {
+            final base = _toDouble(ip['basePrice']);
+            final cust = _toDouble(ip['customizationPrice']);
+            return base + cust;
+          }
+          return 0.0;
+        })();
 
-        // Create the item line with better spacing
+        // Determine currency for line
+        String itemCurrencyCode = (() {
+          final lt = item['lineTotal'];
+          if (lt is Map && lt['currency'] != null)
+            return lt['currency'].toString();
+          final up = item['unitPrice'];
+          if (up is Map && up['currency'] != null)
+            return up['currency'].toString();
+          final cur = item['currency'];
+          if (cur is Map && cur['code'] != null) return cur['code'].toString();
+          if (cur is String) return cur;
+          return orderCurrencyCode.isNotEmpty ? orderCurrencyCode : 'LAK';
+        })();
+
+        String itemCurrencySymbol = (() {
+          final cur = item['currency'];
+          if (cur is Map && cur['symbol'] != null)
+            return cur['symbol'].toString();
+          if (itemCurrencyCode == 'LAK') return 'K';
+          if (itemCurrencyCode == 'USD') return ' 4';
+          return orderCurrencySymbol;
+        })();
+
+        // line total could be explicit or derived
+        double lineTotal = (() {
+          final lt = item['lineTotal'];
+          if (lt is Map) return _toDouble(lt['amount']);
+          final tp = item['totalPrice'];
+          if (tp != null) return _toDouble(tp);
+          // from item.pricing
+          final ip = item['pricing'];
+          if (ip is Map) {
+            final base = _toDouble(ip['basePrice']);
+            final cust = _toDouble(ip['customizationPrice']);
+            return (base + cust) * (quantity == 0 ? 1 : quantity);
+          }
+          return unitPrice * (quantity == 0 ? 1 : quantity);
+        })();
+
+        computedSubtotal += lineTotal;
+
+        // Create the item line with better spacing and right-aligned total
         String itemLine = '$quantity x $name';
+        String priceDisplay = _formatAmount(
+          lineTotal,
+          code: itemCurrencyCode,
+          symbol: itemCurrencySymbol,
+        );
 
-        // Calculate available space for dots/spaces
         const int maxLineLength = 31; // Adjusted for better fit
         int availableSpace =
             maxLineLength - itemLine.length - priceDisplay.length;
-
-        // Ensure minimum spacing
-        if (availableSpace < 2) {
-          availableSpace = 2;
-        }
-
-        // Create spacing with dots
+        if (availableSpace < 2) availableSpace = 2;
         String spacing = ' ' * availableSpace;
 
-        // Print the formatted line
         await sunmiPrinterPlus.printText(
           text: '$itemLine$spacing$priceDisplay',
         );
 
+        // Show unit price if quantity > 1
+        if (quantity > 1 && unitPrice > 0) {
+          final unitDisp = _formatAmount(
+            unitPrice,
+            code: itemCurrencyCode,
+            symbol: itemCurrencySymbol,
+          );
+          await sunmiPrinterPlus.printText(text: '   @ $unitDisp each');
+        }
+
+        // Print customizations/options if present
+        final customizations = item['customizations'];
+        if (customizations is List && customizations.isNotEmpty) {
+          for (final cust in customizations) {
+            final options = cust is Map ? cust['options'] : null;
+            if (options is List && options.isNotEmpty) {
+              for (final opt in options) {
+                if (opt is Map) {
+                  final optName = opt['name']?.toString() ?? '';
+                  final optPriceRaw = opt['price'];
+                  double optPrice = 0.0;
+                  if (optPriceRaw is Map) {
+                    optPrice = _toDouble(optPriceRaw['amount']);
+                  } else {
+                    optPrice = _toDouble(optPriceRaw);
+                  }
+                  String line = '   + $optName';
+                  if (optPrice > 0) {
+                    line +=
+                        ' ${_formatAmount(optPrice, code: itemCurrencyCode, symbol: itemCurrencySymbol)}';
+                  }
+                  await sunmiPrinterPlus.printText(text: line);
+                }
+              }
+            }
+          }
+        }
+
         // Add a small gap between items for better readability
         if (lineItems.indexOf(item) < lineItems.length - 1) {
-          // Only add space if not the last item
+          // no extra blank to keep compact; adjust if needed
         }
       }
 
@@ -1313,17 +1469,47 @@ class PrinterService extends GetxService {
       await sunmiPrinterPlus.printText(text: '');
 
       // Totals section with improved alignment
-      double subtotal = (order?['pricing']?['subtotal']?['amount'] ?? 0.0)
-          .toDouble();
-      double totalDue = (order?['pricing']?['totalDue']?['amount'] ?? 0.0)
-          .toDouble();
+      double subtotal = 0.0;
+      double totalDue = 0.0;
+      // Support both numeric and {amount} map structures
+      final pr = order?['pricing'];
+      if (pr is Map) {
+        final subRaw = pr['subtotal'] ?? pr['subTotal'] ?? pr['subtotalAmount'];
+        final grandRaw = pr['grandTotal'] ?? pr['totalDue'] ?? pr['total'];
+        if (subRaw is Map) {
+          subtotal = _toDouble(subRaw['amount']);
+        } else {
+          subtotal = _toDouble(subRaw);
+        }
+        if (grandRaw is Map) {
+          totalDue = _toDouble(grandRaw['amount']);
+        } else {
+          totalDue = _toDouble(grandRaw);
+        }
+      }
 
-      String subtotalDisplay = currency == 'LAK'
-          ? 'K${subtotal.toStringAsFixed(0)}'
-          : '${subtotal.toStringAsFixed(0)} $currency';
-      String totalDisplay = currency == 'LAK'
-          ? 'K${totalDue.toStringAsFixed(0)}'
-          : '${totalDue.toStringAsFixed(0)} $currency';
+      // Fallback to computed subtotal if pricing not provided
+      if (subtotal <= 0 && computedSubtotal > 0) subtotal = computedSubtotal;
+      if (totalDue <= 0 && subtotal > 0) totalDue = subtotal;
+
+      // Use order-level currency if available
+      final totalsCurrencyCode = orderCurrencyCode.isNotEmpty
+          ? orderCurrencyCode
+          : 'LAK';
+      final totalsCurrencySymbol = orderCurrencySymbol.isNotEmpty
+          ? orderCurrencySymbol
+          : (totalsCurrencyCode == 'LAK' ? 'K' : '');
+
+      String subtotalDisplay = _formatAmount(
+        subtotal,
+        code: totalsCurrencyCode,
+        symbol: totalsCurrencySymbol,
+      );
+      String totalDisplay = _formatAmount(
+        totalDue,
+        code: totalsCurrencyCode,
+        symbol: totalsCurrencySymbol,
+      );
 
       // Format subtotal line with dot spacing (matching item format)
       String subtotalLine = 'Subtotal';
@@ -1343,7 +1529,10 @@ class PrinterService extends GetxService {
       );
 
       // Format total line with dot spacing (matching item format)
-      String totalLine = 'Total';
+      // Show as Total or Grand Total depending on provided structure
+      String totalLine = (pr is Map && pr['grandTotal'] != null)
+          ? 'Grand Total'
+          : 'Total';
       int totalDotsNeeded =
           totalLineLength - totalLine.length - totalDisplay.length;
 
@@ -1358,6 +1547,64 @@ class PrinterService extends GetxService {
         text: '$totalLine$totalDots$totalDisplay',
       );
 
+      // Optional: print discounts if present
+      if (pr is Map) {
+        final totalDiscount = _toDouble(pr['totalDiscount']);
+        final totalPromo = _toDouble(pr['totalPromotionDiscount']);
+        final totalStaged = _toDouble(pr['totalStagedPromotionDiscount']);
+        final totalFees = _toDouble(pr['totalFees']);
+        final totalTax = _toDouble(pr['totalTax']);
+        String lineLabel;
+        String lineValue;
+        if (totalDiscount > 0) {
+          lineLabel = 'Discounts';
+          lineValue =
+              '-${_formatAmount(totalDiscount, code: totalsCurrencyCode)}';
+          int dots = totalLineLength - lineLabel.length - lineValue.length;
+          if (dots < 2) dots = 2;
+          await sunmiPrinterPlus.printText(
+            text: '$lineLabel${' ' * dots}$lineValue',
+          );
+        }
+        if (totalPromo > 0) {
+          lineLabel = 'Promotions';
+          lineValue = '-${_formatAmount(totalPromo, code: totalsCurrencyCode)}';
+          int dots = totalLineLength - lineLabel.length - lineValue.length;
+          if (dots < 2) dots = 2;
+          await sunmiPrinterPlus.printText(
+            text: '$lineLabel${' ' * dots}$lineValue',
+          );
+        }
+        if (totalStaged > 0) {
+          lineLabel = 'Staged Promo';
+          lineValue =
+              '-${_formatAmount(totalStaged, code: totalsCurrencyCode)}';
+          int dots = totalLineLength - lineLabel.length - lineValue.length;
+          if (dots < 2) dots = 2;
+          await sunmiPrinterPlus.printText(
+            text: '$lineLabel${' ' * dots}$lineValue',
+          );
+        }
+        if (totalFees > 0) {
+          lineLabel = 'Fees';
+          lineValue = _formatAmount(totalFees, code: totalsCurrencyCode);
+          int dots = totalLineLength - lineLabel.length - lineValue.length;
+          if (dots < 2) dots = 2;
+          await sunmiPrinterPlus.printText(
+            text: '$lineLabel${' ' * dots}$lineValue',
+          );
+        }
+        if (totalTax > 0) {
+          lineLabel = 'Tax';
+          lineValue = _formatAmount(totalTax, code: totalsCurrencyCode);
+          int dots = totalLineLength - lineLabel.length - lineValue.length;
+          if (dots < 2) dots = 2;
+          await sunmiPrinterPlus.printText(
+            text: '$lineLabel${' ' * dots}$lineValue',
+          );
+        }
+      }
+
       await sunmiPrinterPlus.printText(text: '');
 
       // Payment information with improved alignment
@@ -1368,9 +1615,10 @@ class PrinterService extends GetxService {
             payment['method']?.toString().toUpperCase() ?? 'BANK_TRANSFER';
         double paidAmount = (payment['customerAmount']?['amount'] ?? 0.0)
             .toDouble();
-        String paidDisplay = currency == 'LAK'
-            ? 'K${paidAmount.toStringAsFixed(0)}'
-            : '${paidAmount.toStringAsFixed(2)} $currency';
+        final payCurCode =
+            payment['customerAmount']?['currency']?.toString() ??
+            totalsCurrencyCode;
+        String paidDisplay = _formatAmount(paidAmount, code: payCurCode);
 
         // Payment method line with dot spacing (matching other lines)
         int paymentDotsNeeded =

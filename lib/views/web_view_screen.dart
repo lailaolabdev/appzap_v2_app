@@ -64,39 +64,6 @@ class WebViewScreen extends StatelessWidget {
           ],
         ),
       ),
-      // Floating action button for printer status
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () async {
-      //     final controller = Get.find<WebViewController>();
-      //     await controller.printerService.testPrinterWithMockReceipt();
-      //     // final status = await controller.printerService.getPrinterStatus();
-
-      //     // Get.dialog(
-      //     //   AlertDialog(
-      //     //     title: const Text('Printer Status'),
-      //     //     content: Column(
-      //     //       mainAxisSize: MainAxisSize.min,
-      //     //       crossAxisAlignment: CrossAxisAlignment.start,
-      //     //       children: [
-      //     //         Text('Connected: ${status['isConnected'] ? 'Yes' : 'No'}'),
-      //     //         if (status['error'] != null)
-      //     //           Text('Error: ${status['error']}'),
-      //     //         Text('Last checked: ${status['timestamp']}'),
-      //     //       ],
-      //     //     ),
-      //     //     actions: [
-      //     //       TextButton(
-      //     //         onPressed: () => Get.back(),
-      //     //         child: const Text('Close'),
-      //     //       ),
-      //     //     ],
-      //     //   ),
-      //     // );
-      //   },
-      //   icon: const Icon(Icons.print),
-      //   label: const Text('Printer'),
-      //   backgroundColor: Colors.green,
-      // ),
     );
   }
 }
