@@ -17,7 +17,7 @@ class WebViewController extends GetxController {
   final canGoForward = false.obs;
 
   // Initial URL
-  final String initialUrl = 'https://staging-v2.appzap.la/';
+  final String initialUrl = 'https://appzap-v2.appzap.la/';
 
   @override
   void onInit() {
@@ -85,7 +85,10 @@ class WebViewController extends GetxController {
             //   receiptData: data,
             // );
 
-            final success = await printerService.printData(receiptData: data);
+            log("LOGO9999: ${data['restaurantInfo']?['logo']}");
+
+            // final success = await printerService.printData(receiptData: data);
+            final success = await printerService.printBillReceipt(receiptData: data);
 
             return {
               "status": success ? "success" : "error",

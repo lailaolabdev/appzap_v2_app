@@ -1,3 +1,5 @@
+import 'package:appzap_v2_app/views/bluetooth_connect.dart';
+import 'package:appzap_v2_app/controllers/bluetooth_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
@@ -9,8 +11,33 @@ class WebViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(WebViewController());
+    final bluetoothController = Get.put(BluetoothController());
 
     return Scaffold(
+      floatingActionButton: Obx(() {
+        // Determine icon and color based on connection status
+        IconData icon;
+        Color? backgroundColor;
+
+        if (bluetoothController.isConnecting.value) {
+          icon = Icons.bluetooth_searching;
+          backgroundColor = Colors.orange;
+        } else if (bluetoothController.isConnected) {
+          icon = Icons.bluetooth_connected;
+          backgroundColor = Colors.green;
+        } else {
+          icon = Icons.bluetooth;
+          backgroundColor = null; // Default theme color
+        }
+
+        return FloatingActionButton(
+          onPressed: () {
+            Get.to(() => PrintingWidget());
+          },
+          backgroundColor: backgroundColor,
+          child: Icon(icon),
+        );
+      }),
       body: SafeArea(
         child: Column(
           children: [

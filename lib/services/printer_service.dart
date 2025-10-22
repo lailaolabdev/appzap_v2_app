@@ -1183,16 +1183,16 @@ class PrinterService extends GetxService {
       }
 
       // Print logo if available
-      if (logoUrl != null && logoUrl.isNotEmpty) {
-        Uint8List? logoBytes = await _downloadAndProcessLogo(logoUrl);
-        if (logoBytes != null) {
-          await sunmiPrinterPlus.printImage(
-            logoBytes,
-            align: SunmiPrintAlign.CENTER,
-          );
-          await sunmiPrinterPlus.printText(text: '');
-        }
-      }
+      // if (logoUrl != null && logoUrl.isNotEmpty) {
+      //   Uint8List? logoBytes = await _downloadAndProcessLogo(logoUrl);
+      //   if (logoBytes != null) {
+      //     await sunmiPrinterPlus.printImage(
+      //       logoBytes,
+      //       align: SunmiPrintAlign.CENTER,
+      //     );
+      //     await sunmiPrinterPlus.printText(text: '');
+      //   }
+      // }
 
       await sunmiPrinterPlus.printText(text: '');
       await sunmiPrinterPlus.printText(
@@ -1333,8 +1333,8 @@ class PrinterService extends GetxService {
             ? useSymbol
             : (useCode.isNotEmpty ? useCode : '');
         return sym.isEmpty
-            ? amount.toStringAsFixed(2)
-            : '$sym${amount.toStringAsFixed(2)}';
+            ? amount.toStringAsFixed(0)
+            : '$sym${amount.toStringAsFixed(0)}';
       }
 
       double computedSubtotal = 0.0;
@@ -1512,7 +1512,7 @@ class PrinterService extends GetxService {
       );
 
       // Format subtotal line with dot spacing (matching item format)
-      String subtotalLine = 'Subtotal';
+      String subtotalLine = 'ລວມ';
       const int totalLineLength = 32;
       int subtotalDotsNeeded =
           totalLineLength - subtotalLine.length - subtotalDisplay.length;
@@ -1531,7 +1531,7 @@ class PrinterService extends GetxService {
       // Format total line with dot spacing (matching item format)
       // Show as Total or Grand Total depending on provided structure
       String totalLine = (pr is Map && pr['grandTotal'] != null)
-          ? 'Grand Total'
+          ? 'ລວມທັງໝົດ'
           : 'Total';
       int totalDotsNeeded =
           totalLineLength - totalLine.length - totalDisplay.length;
@@ -1612,7 +1612,7 @@ class PrinterService extends GetxService {
       if (payments.isNotEmpty) {
         var payment = payments[0];
         String paymentMethod =
-            payment['method']?.toString().toUpperCase() ?? 'BANK_TRANSFER';
+            payment['method']?.toString().toUpperCase() ?? 'CASH';
         double paidAmount = (payment['customerAmount']?['amount'] ?? 0.0)
             .toDouble();
         final payCurCode =
@@ -1661,6 +1661,310 @@ class PrinterService extends GetxService {
       await sunmiPrinterPlus.printText(text: '                       ');
     } catch (e) {
       print('Error printing data: $e');
+    }
+  }
+
+  /// Print a bill receipt (pre-payment) using order/pricing structure
+  Future printBillReceipt({required Map<String, dynamic> receiptData}) async {
+    try {
+      Map<String, dynamic>? order;
+      Map<String, dynamic>? restaurantInfo;
+      String? logoUrl;
+
+      if (receiptData.containsKey('receiptData')) {
+        order = receiptData['receiptData']?['order'];
+        restaurantInfo = receiptData['restaurantInfo'];
+        logoUrl = receiptData['restaurantInfo']?['logo'];
+      } else {
+        order = receiptData['order'] ?? receiptData;
+        restaurantInfo = receiptData['restaurantInfo'];
+        logoUrl = receiptData['restaurantInfo']?['logo'];
+      }
+
+      log("LOGO123: $logoUrl");
+
+      // Print logo if available
+      // if (logoUrl != null && logoUrl.isNotEmpty) {
+      //   Uint8List? logoBytes = await _downloadAndProcessLogo(logoUrl);
+      //   if (logoBytes != null) {
+      //     await sunmiPrinterPlus.printImage(
+      //       logoBytes,
+      //       align: SunmiPrintAlign.CENTER,
+      //     );
+      //     await sunmiPrinterPlus.printText(text: '');
+      //   }
+      // }
+
+      // Header
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '        ${restaurantInfo?['name'] ?? ''}',
+      );
+      await sunmiPrinterPlus.printText(
+        text: '       ${restaurantInfo?['slogan'] ?? ''}',
+      );
+      await sunmiPrinterPlus.printText(
+        text: '           ${restaurantInfo?['contactInfo']?['phone'] ?? '-'}',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '============= ໃບບິນ ============',
+      );
+      await sunmiPrinterPlus.printText(text: '');
+
+      // Helpers
+      double _toDouble(dynamic v) {
+        if (v == null) return 0.0;
+        if (v is num) return v.toDouble();
+        if (v is String) return double.tryParse(v) ?? 0.0;
+        return 0.0;
+      }
+
+      String orderCurrencyCode = (() {
+        final c = order?['currency'];
+        if (c is Map) return c['code']?.toString() ?? '';
+        if (c is String) return c;
+        final pc = order?['pricing']?['currency'];
+        if (pc is Map) return pc['code']?.toString() ?? '';
+        if (pc is String) return pc;
+        return '';
+      })();
+
+      String orderCurrencySymbol = (() {
+        final c = order?['currency'];
+        if (c is Map && c['symbol'] != null) return c['symbol'].toString();
+        final pc = order?['pricing']?['currency'];
+        if (pc is Map && pc['symbol'] != null) return pc['symbol'].toString();
+        switch (orderCurrencyCode) {
+          case 'USD':
+            return ' 4';
+          case 'LAK':
+            return 'K';
+          case 'THB':
+            return '฿';
+          default:
+            return '';
+        }
+      })();
+
+      String _formatAmount(double amount, {String? code, String? symbol}) {
+        final useCode = code?.isNotEmpty == true ? code! : orderCurrencyCode;
+        final useSymbol = symbol?.isNotEmpty == true
+            ? symbol!
+            : orderCurrencySymbol;
+        if (useCode == 'LAK' || useSymbol == 'K') {
+          return 'K${amount.toStringAsFixed(0)}';
+        }
+        final sym = useSymbol.isNotEmpty
+            ? useSymbol
+            : (useCode.isNotEmpty ? useCode : '');
+        return sym.isEmpty
+            ? amount.toStringAsFixed(0)
+            : '$sym${amount.toStringAsFixed(0)}';
+      }
+
+      // Meta
+      await sunmiPrinterPlus.printText(
+        text: 'ເລກບິນ: ${order?['orderNumber'] ?? order?['orderId'] ?? '-'}',
+      );
+      await sunmiPrinterPlus.printText(
+        text: 'ປະເພດ: ${order?['orderType'] ?? '-'}  ',
+      );
+      await sunmiPrinterPlus.printText(
+        text: 'ຄິວ: ${order?['qNumber'] ?? '-'}',
+      );
+      final orderedAt = order?['timing']?['orderedAt']?.toString() ?? '';
+      if (orderedAt.isNotEmpty) {
+        try {
+          final dt = DateTime.parse(orderedAt);
+          final formatted =
+              '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+          await sunmiPrinterPlus.printText(text: 'ວັນ/ເວລາ: $formatted');
+        } catch (_) {}
+      }
+      final payStatus = order?['paymentInfo']?['paymentStatus']?.toString();
+      if (payStatus != null && payStatus.isNotEmpty) {
+        await sunmiPrinterPlus.printText(text: 'ການຈ່າຍເງິນ: $payStatus');
+      }
+
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+      await sunmiPrinterPlus.printText(text: '            ລາຍການ');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+
+      final List<dynamic> lineItems = order?['lineItems'] ?? [];
+      double computedSubtotal = 0.0;
+
+      for (final item in lineItems) {
+        final name = item['name']?.toString() ?? '';
+        final quantity = _toDouble(item['quantity']).round();
+
+        // unit price from unitPrice or pricing
+        final unitPrice = (() {
+          final up = item['unitPrice'];
+          if (up is Map) return _toDouble(up['amount']);
+          if (up != null) return _toDouble(up);
+          final ip = item['pricing'];
+          if (ip is Map) {
+            return _toDouble(ip['basePrice']) +
+                _toDouble(ip['customizationPrice']);
+          }
+          return 0.0;
+        })();
+
+        // item currency
+        final itemCurMap = item['currency'];
+        final itemCurrencyCode = (itemCurMap is Map)
+            ? (itemCurMap['code']?.toString() ?? orderCurrencyCode)
+            : orderCurrencyCode;
+        final itemCurrencySymbol = (itemCurMap is Map)
+            ? (itemCurMap['symbol']?.toString() ?? orderCurrencySymbol)
+            : orderCurrencySymbol;
+
+        // line total
+        final lineTotal = (() {
+          final lt = item['lineTotal'];
+          if (lt is Map) return _toDouble(lt['amount']);
+          final tp = item['totalPrice'];
+          if (tp != null) return _toDouble(tp);
+          final ip = item['pricing'];
+          if (ip is Map) {
+            final base = _toDouble(ip['basePrice']);
+            final cust = _toDouble(ip['customizationPrice']);
+            return (base + cust) * (quantity == 0 ? 1 : quantity);
+          }
+          return unitPrice * (quantity == 0 ? 1 : quantity);
+        })();
+
+        computedSubtotal += lineTotal;
+
+        final itemLine = '$quantity x $name';
+        final priceDisplay = _formatAmount(
+          lineTotal,
+          code: itemCurrencyCode,
+          symbol: itemCurrencySymbol,
+        );
+        const int maxLineLength = 31;
+        int availableSpace =
+            maxLineLength - itemLine.length - priceDisplay.length;
+        if (availableSpace < 2) availableSpace = 2;
+        final spacing = ' ' * availableSpace;
+        await sunmiPrinterPlus.printText(
+          text: '$itemLine$spacing$priceDisplay',
+        );
+
+        // if (quantity > 1 && unitPrice > 0) {
+        //   final unitDisp = _formatAmount(
+        //     unitPrice,
+        //     code: itemCurrencyCode,
+        //     symbol: itemCurrencySymbol,
+        //   );
+        //   await sunmiPrinterPlus.printText(text: '   @ $unitDisp each');
+        // }
+
+        // options/customizations if any
+        final customizations = item['customizations'];
+        if (customizations is List && customizations.isNotEmpty) {
+          for (final cust in customizations) {
+            final options = cust is Map ? cust['options'] : null;
+            if (options is List) {
+              for (final opt in options) {
+                if (opt is Map) {
+                  final optName = opt['name']?.toString() ?? '';
+                  final optPrice = _toDouble(opt['price']);
+                  String line = '   + $optName';
+                  if (optPrice > 0) {
+                    line +=
+                        ' ${_formatAmount(optPrice, code: itemCurrencyCode, symbol: itemCurrencySymbol)}';
+                  }
+                  await sunmiPrinterPlus.printText(text: line);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+
+      // totals
+      final pr = order?['pricing'];
+      double subtotal = 0.0;
+      double grandTotal = 0.0;
+      if (pr is Map) {
+        final subRaw = pr['subtotal'];
+        final grandRaw = pr['grandTotal'] ?? pr['totalDue'] ?? pr['total'];
+        subtotal = subRaw is Map
+            ? _toDouble(subRaw['amount'])
+            : _toDouble(subRaw);
+        grandTotal = grandRaw is Map
+            ? _toDouble(grandRaw['amount'])
+            : _toDouble(grandRaw);
+      }
+      if (subtotal <= 0 && computedSubtotal > 0) subtotal = computedSubtotal;
+      if (grandTotal <= 0 && subtotal > 0) grandTotal = subtotal;
+
+      // currency for totals
+      final totalsCurrencyCode = (() {
+        final pc = (pr is Map) ? pr['currency'] : null;
+        if (pc is Map) return pc['code']?.toString() ?? orderCurrencyCode;
+        if (pc is String) return pc;
+        return orderCurrencyCode;
+      })();
+      final totalsCurrencySymbol = (() {
+        final pc = (pr is Map) ? pr['currency'] : null;
+        if (pc is Map && pc['symbol'] != null) return pc['symbol'].toString();
+        return orderCurrencySymbol;
+      })();
+
+      String subtotalDisplay = _formatAmount(
+        subtotal,
+        code: totalsCurrencyCode,
+        symbol: totalsCurrencySymbol,
+      );
+      String totalDisplay = _formatAmount(
+        grandTotal,
+        code: totalsCurrencyCode,
+        symbol: totalsCurrencySymbol,
+      );
+
+      const int totalLineLength = 30;
+      String subtotalLine = 'ລວມ';
+      int subtotalDotsNeeded =
+          totalLineLength - subtotalLine.length - subtotalDisplay.length;
+      if (subtotalDotsNeeded < 2) subtotalDotsNeeded = 2;
+      await sunmiPrinterPlus.printText(
+        text: '$subtotalLine${' ' * subtotalDotsNeeded}$subtotalDisplay',
+      );
+
+      String totalLine = 'ລວມທັງໝົດ';
+      int totalDotsNeeded =
+          totalLineLength - totalLine.length - totalDisplay.length;
+      if (totalDotsNeeded < 2) totalDotsNeeded = 2;
+      await sunmiPrinterPlus.printText(
+        text: '$totalLine${' ' * totalDotsNeeded}$totalDisplay',
+      );
+
+      await sunmiPrinterPlus.printText(text: '');
+      await sunmiPrinterPlus.printText(
+        text: '================================',
+      );
+      await sunmiPrinterPlus.printText(
+        text: '             ${restaurantInfo?['shortDescription'] ?? ''}',
+      );
+      await sunmiPrinterPlus.printText(text: '                       ');
+      await sunmiPrinterPlus.printText(text: '                       ');
+      await sunmiPrinterPlus.printText(text: '                       ');
+      await sunmiPrinterPlus.printText(text: '');
+    } catch (e) {
+      print('Error printing bill: $e');
     }
   }
 }
