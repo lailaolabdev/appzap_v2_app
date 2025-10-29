@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import '../services/printer_service.dart';
+import 'bluetooth_controller.dart';
 
 class WebViewController extends GetxController {
   InAppWebViewController? webViewController;
   final printerService = Get.find<PrinterService>();
+  late final BluetoothController bluetoothController;
 
   // Observable variables
   final isLoading = true.obs;
@@ -17,11 +19,17 @@ class WebViewController extends GetxController {
   final canGoForward = false.obs;
 
   // Initial URL
-  final String initialUrl = 'https://appzap-v2.appzap.la/';
+  final String initialUrl = 'https://staging-v2.appzap.la/';
 
   @override
   void onInit() {
     super.onInit();
+    // Get or create BluetoothController instance
+    if (Get.isRegistered<BluetoothController>()) {
+      bluetoothController = Get.find<BluetoothController>();
+    } else {
+      bluetoothController = Get.put(BluetoothController());
+    }
     print('WebViewController initialized');
   }
 
@@ -63,6 +71,52 @@ class WebViewController extends GetxController {
       },
     );
 
+    webViewController?.addJavaScriptHandler(
+      handlerName: 'printBluetoothReceipt',
+      callback: (arguments) async {
+        try {
+          if (arguments.isNotEmpty) {
+            final data = arguments[0] as Map<String, dynamic>;
+
+            log('Received Bluetooth receipt data: ${data.toString()}');
+
+            // Check if Bluetooth printer is connected
+            if (bluetoothController.connectedDevice.value == null) {
+              return {
+                "status": "error",
+                "message":
+                    "No Bluetooth printer connected. Please connect a printer first.",
+                "timestamp": DateTime.now().toIso8601String(),
+              };
+            }
+
+            // Print using Bluetooth
+            await bluetoothController.printBluetoothReceipt(receiptData: data);
+
+            return {
+              "status": "success",
+              "message": "Bluetooth receipt printed successfully",
+              "timestamp": DateTime.now().toIso8601String(),
+              "printer":
+                  bluetoothController.connectedDevice.value?.platformName,
+            };
+          }
+          return {
+            "status": "error",
+            "message": "No receipt data provided",
+            "timestamp": DateTime.now().toIso8601String(),
+          };
+        } catch (e) {
+          log('Error in printBluetoothReceipt handler: $e');
+          return {
+            "status": "error",
+            "message": e.toString(),
+            "timestamp": DateTime.now().toIso8601String(),
+          };
+        }
+      },
+    );
+
     // Handler for printing receipts with image and text
     webViewController?.addJavaScriptHandler(
       handlerName: 'printReceipt',
@@ -88,7 +142,11 @@ class WebViewController extends GetxController {
             log("LOGO9999: ${data['restaurantInfo']?['logo']}");
 
             // final success = await printerService.printData(receiptData: data);
-            final success = await printerService.printBillReceipt(receiptData: data);
+            final success = await printerService.printBillReceipt(
+              receiptData: data,
+            );
+
+            await bluetoothController.printBluetoothReceipt(receiptData: data);
 
             return {
               "status": success ? "success" : "error",
@@ -282,13 +340,13 @@ class WebViewController extends GetxController {
     log('WebView Error Handled: ${error.description}');
     log('Error Type: ${error.type}');
     log('Failing URL: ${request.url}');
-    
+
     // Update loading state
     isLoading.value = false;
-    
+
     // Determine error type and show appropriate user message
     String userMessage = _getUserFriendlyErrorMessage(error);
-    
+
     // Show error message with retry option for network errors
     if (_isNetworkError(error)) {
       Get.snackbar(
@@ -321,36 +379,41 @@ class WebViewController extends GetxController {
       );
     }
   }
-  
+
   /// Get user-friendly error message based on error type
   String _getUserFriendlyErrorMessage(WebResourceError error) {
     final errorCode = error.type.toString();
-    
-    if (errorCode.contains('HOST_LOOKUP') || errorCode.contains('NAME_NOT_RESOLVED')) {
+
+    if (errorCode.contains('HOST_LOOKUP') ||
+        errorCode.contains('NAME_NOT_RESOLVED')) {
       return 'Unable to connect to the server. Please check your internet connection.';
-    } else if (errorCode.contains('CONNECT') || errorCode.contains('CONNECTION')) {
+    } else if (errorCode.contains('CONNECT') ||
+        errorCode.contains('CONNECTION')) {
       return 'Connection failed. The server might be temporarily unavailable.';
     } else if (errorCode.contains('TIMEOUT')) {
       return 'Request timed out. The server is taking too long to respond.';
-    } else if (errorCode.contains('AUTHENTICATION') || errorCode.contains('AUTH')) {
+    } else if (errorCode.contains('AUTHENTICATION') ||
+        errorCode.contains('AUTH')) {
       return 'Authentication required. Please check your credentials.';
-    } else if (errorCode.contains('FILE_NOT_FOUND') || errorCode.contains('404')) {
+    } else if (errorCode.contains('FILE_NOT_FOUND') ||
+        errorCode.contains('404')) {
       return 'The requested page was not found.';
-    } else if (errorCode.contains('TOO_MANY_REQUESTS') || errorCode.contains('429')) {
+    } else if (errorCode.contains('TOO_MANY_REQUESTS') ||
+        errorCode.contains('429')) {
       return 'Too many requests. Please wait a moment and try again.';
     } else {
       return 'An error occurred while loading the page: ${error.description}';
     }
   }
-  
+
   /// Check if the error is a network-related error that can be retried
   bool _isNetworkError(WebResourceError error) {
     final errorCode = error.type.toString();
     return errorCode.contains('HOST_LOOKUP') ||
-           errorCode.contains('NAME_NOT_RESOLVED') ||
-           errorCode.contains('CONNECT') ||
-           errorCode.contains('CONNECTION') ||
-           errorCode.contains('TIMEOUT');
+        errorCode.contains('NAME_NOT_RESOLVED') ||
+        errorCode.contains('CONNECT') ||
+        errorCode.contains('CONNECTION') ||
+        errorCode.contains('TIMEOUT');
   }
 
   /// Show JavaScript communication example

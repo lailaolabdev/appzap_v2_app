@@ -11,7 +11,7 @@ class PrintingWidget extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bluetooth Printers'),
+        title: const Text('Bluetooth'),
         actions: [
           // Connection status indicator
           Obx(() {
@@ -26,7 +26,7 @@ class PrintingWidget extends StatelessWidget {
                       size: 18,
                     ),
                     label: const Text(
-                      'Connected',
+                      'Connect',
                       style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     backgroundColor: Colors.green,
@@ -168,7 +168,7 @@ class PrintingWidget extends StatelessWidget {
               }
 
               // Show device list
-              return ListView.separated(
+              return Obx(() => ListView.separated(
                 itemBuilder: (context, index) {
                   final device = controller.filteredResults[index].device;
                   print('device: ${device.platformName}');
@@ -260,7 +260,7 @@ class PrintingWidget extends StatelessWidget {
                 },
                 separatorBuilder: (context, index) => const Divider(),
                 itemCount: controller.filteredResults.length,
-              );
+              ));
             }),
           ),
         ],

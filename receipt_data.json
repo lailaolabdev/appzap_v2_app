@@ -1,0 +1,349 @@
+{
+    "success": true,
+    "data": {
+        "order": {
+            "orderId": "ORD-a0f30886-538a-4bfe-a1b0-e604b7605f8c",
+            "orderType": "takeaway",
+            "orderStatus": "completed",
+            "qNumber": 12,
+            "customer": {
+                "name": "Takeaway Customer",
+                "phone": "000-000-0000",
+                "email": null
+            },
+            "lineItems": [
+                {
+                    "lineItemId": "line-1761193947118-y9ztrwwgo",
+                    "menuItemId": "68b5b363588712b711c908a0",
+                    "name": "piggy B",
+                    "categoryId": "6880a5b5b0ac32158e65d426",
+                    "quantity": 1,
+                    "unitPrice": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "lineTotal": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "options": [],
+                    "status": "pending",
+                    "promotionApplied": false,
+                    "sourcePromotionId": null,
+                    "sourcePromotionName": null,
+                    "promotionDiscount": {
+                        "amount": 0,
+                        "currency": "LAK"
+                    },
+                    "promotionDetails": {
+                        "originalLineTotal": 20000,
+                        "discountPerUnit": 0,
+                        "targetedQuantity": 0,
+                        "valueContribution": 0,
+                        "proportionalAllocation": null
+                    },
+                    "kitchenInfo": {
+                        "priority": 2,
+                        "course": "main",
+                        "allergenInfo": []
+                    },
+                    "statusHistory": [
+                        {
+                            "status": "pending",
+                            "timestamp": "2025-10-23T04:32:32.379Z",
+                            "updatedBy": null,
+                            "_id": "68f9afe0ffd007956e3dd6b8"
+                        }
+                    ],
+                    "cancellation": {
+                        "requiresApproval": false,
+                        "isApproved": false
+                    },
+                    "_id": "68f9afe0ffd007956e3dd6b7",
+                    "createdAt": "2025-10-23T04:32:32.382Z",
+                    "updatedAt": "2025-10-23T04:32:32.382Z"
+                }
+            ],
+            "pricing": {
+                "lineItemsTotal": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "modifiers": {
+                    "discounts": [],
+                    "taxes": [],
+                    "fees": [],
+                    "tips": []
+                },
+                "subtotal": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "totalDiscount": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalTax": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalFees": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalTip": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalDue": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "calculatedAt": "2025-10-23T04:32:32.291Z",
+                "currency": "LAK",
+                "exchangeRate": 1
+            },
+            "staff": {
+                "createdBy": "685a08dc8c439e9188ed70aa"
+            },
+            "timing": {
+                "orderedAt": "2025-10-23T04:32:32.379Z"
+            },
+            "source": {
+                "type": "pos"
+            },
+            "createdAt": "2025-10-23T04:32:32.390Z",
+            "updatedAt": "2025-10-23T04:32:35.988Z"
+        },
+        "qNumber": 12,
+        "transaction": {
+            "paymentSummary": {
+                "totalDue": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "totalPaid": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "balance": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "paymentStatus": "fully_paid",
+                "grossPayments": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "totalFees": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "netRevenue": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "paymentMethodBreakdown": [
+                    {
+                        "method": "bank_transfer",
+                        "count": 1,
+                        "grossAmount": {
+                            "amount": 20000,
+                            "currency": "LAK"
+                        },
+                        "fees": {
+                            "amount": 0,
+                            "currency": "LAK"
+                        },
+                        "netAmount": {
+                            "amount": 20000,
+                            "currency": "LAK"
+                        },
+                        "_id": "68f9afe3ffd007956e3dd6c5"
+                    }
+                ],
+                "multiCurrency": false,
+                "conversionSummary": {
+                    "conversionApplied": false
+                }
+            }
+        },
+        "pricing": {
+            "lineItems": [
+                {
+                    "lineItemId": "line-1761193947118-y9ztrwwgo",
+                    "menuItemId": "68b5b363588712b711c908a0",
+                    "quantity": 1,
+                    "selectedOptions": [],
+                    "specialInstructions": "",
+                    "seatNumber": null,
+                    "courseNumber": 1,
+                    "priority": "normal",
+                    "requiresSpecialPackaging": false,
+                    "packagingType": "standard",
+                    "temperatureRequirement": "room_temp",
+                    "isFragile": false,
+                    "name": "piggy B",
+                    "categoryId": "6880a5b5b0ac32158e65d426",
+                    "unitPrice": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "lineTotal": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "options": [],
+                    "promotionApplied": false,
+                    "sourcePromotionId": null,
+                    "sourcePromotionName": null,
+                    "promotionDiscount": {
+                        "amount": 0,
+                        "currency": "LAK"
+                    },
+                    "promotionDetails": {
+                        "originalLineTotal": 20000,
+                        "discountPerUnit": 0,
+                        "targetedQuantity": 0,
+                        "valueContribution": 0,
+                        "proportionalAllocation": null
+                    }
+                }
+            ],
+            "lineItemsTotal": {
+                "amount": 20000,
+                "currency": "LAK"
+            },
+            "modifiers": {
+                "discounts": [],
+                "taxes": [],
+                "fees": [],
+                "tips": []
+            },
+            "subtotal": {
+                "amount": 20000,
+                "currency": "LAK"
+            },
+            "totalDiscount": {
+                "amount": 0,
+                "currency": "LAK"
+            },
+            "totalTax": {
+                "amount": 0,
+                "currency": "LAK"
+            },
+            "totalFees": {
+                "amount": 0,
+                "currency": "LAK"
+            },
+            "totalTip": {
+                "amount": 0,
+                "currency": "LAK"
+            },
+            "totalDue": {
+                "amount": 20000,
+                "currency": "LAK"
+            },
+            "grandTotal": {
+                "amount": 20000,
+                "currency": "LAK"
+            },
+            "promotions": {
+                "applied": [],
+                "summary": {
+                    "totalDiscount": {
+                        "amount": 0,
+                        "currency": "LAK"
+                    },
+                    "totalOriginal": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "totalFinal": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "promotionCount": 0,
+                    "savingsPercentage": 0
+                },
+                "audit": {
+                    "calculatedAt": "2025-10-23T04:32:32.291Z",
+                    "calculatedBy": null,
+                    "lastModifiedAt": "2025-10-23T04:32:32.291Z",
+                    "lastModifiedBy": null,
+                    "calculationMethod": "AUTOMATIC",
+                    "validationStatus": "VALID",
+                    "validationMessages": [],
+                    "history": []
+                },
+                "discounts": [],
+                "freeItems": [],
+                "lineItemTargeting": {
+                    "enabled": false,
+                    "targetedPromotions": []
+                }
+            },
+            "consolidatedTotals": {
+                "totalLineItems": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "totalDiscounts": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalTaxes": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalFees": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "totalTips": {
+                    "amount": 0,
+                    "currency": "LAK"
+                },
+                "grandTotal": {
+                    "amount": 20000,
+                    "currency": "LAK"
+                },
+                "currency": "LAK",
+                "calculatedAt": "2025-10-23T04:32:32.291Z",
+                "calculationMethod": {
+                    "taxesIncluded": true,
+                    "feesIncluded": false,
+                    "tipsIncluded": false,
+                    "promotionsApplied": false,
+                    "lineItemTargetingUsed": false,
+                    "deliveryFeeIncluded": false
+                }
+            },
+            "currency": "LAK",
+            "calculatedAt": "2025-10-23T04:32:32.291Z",
+            "performance": {
+                "dataFetchTime": 2,
+                "totalProcessingTime": 8,
+                "optimized": true
+            },
+            "payments": [
+                {
+                    "method": "bank_transfer",
+                    "customerAmount": {
+                        "amount": 20000,
+                        "currency": "LAK"
+                    },
+                    "tenderedAmount": null,
+                    "cardDetails": null,
+                    "mobileWalletDetails": null,
+                    "bankTransferDetails": null
+                }
+            ]
+        },
+        "loyalty": {
+            "pointsProcessing": null
+        },
+        "message": "Takeaway order created and payment processed successfully"
+    },
+    "timestamp": "2025-10-23T04:32:35.999Z"
+}

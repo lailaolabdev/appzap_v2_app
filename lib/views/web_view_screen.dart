@@ -14,6 +14,7 @@ class WebViewScreen extends StatelessWidget {
     final bluetoothController = Get.put(BluetoothController());
 
     return Scaffold(
+
       floatingActionButton: Obx(() {
         // Determine icon and color based on connection status
         IconData icon;
